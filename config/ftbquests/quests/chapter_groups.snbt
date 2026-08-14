@@ -1,0 +1,8 @@
+{
+	chapter_groups: [
+		{ id: "1E3C6E68A7AB2C6B", title: "说明" }
+		{ id: "1AA8CE2783BE495F", title: "主世界" }
+		{ id: "2DA386E3EEA8A431", title: "下界" }
+		{ id: "6F335AC5203813D3", title: "末地" }
+	]
+}
