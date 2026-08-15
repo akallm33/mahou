@@ -1,0 +1,792 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "091619E05970AB2A"
+	group: "636843B9859B5209"
+	id: "091619E05970AB2A"
+	order_index: 3
+	quest_links: [ ]
+	quests: [
+		{
+			id: "2C140BECAFBF82FC"
+			tasks: [{
+				id: "72F5157EFA19278A"
+				title: "主世界"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -7.5d
+		}
+		{
+			id: "4F1FFD82EC600552"
+			tasks: [{
+				id: "2E58359DAA410F90"
+				title: "下界"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -6.0d
+		}
+		{
+			id: "532B2630D8C1F4C2"
+			tasks: [{
+				id: "48E23090195DC0A8"
+				title: "末地"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -4.5d
+		}
+		{
+			id: "5D55472C51EC11FE"
+			tasks: [{
+				id: "02274B421DBA9F8E"
+				title: "暮色森林"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -3.0d
+		}
+		{
+			id: "5C5F23CFE08951B0"
+			tasks: [{
+				id: "0908FBB585F4C00B"
+				structure: "#minecraft:village"
+				title: "村庄"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: -7.5d
+		}
+		{
+			id: "6D6A197205A20DE0"
+			tasks: [{
+				id: "4A83F7359E29A123"
+				structure: "minecraft:nether_fossil"
+				title: "下界要塞"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: -6.0d
+		}
+		{
+			id: "693F4DEE781CA7BD"
+			tasks: [{
+				id: "4146670F109CFA28"
+				structure: "minecraft:bastion_remnant"
+				title: "堡垒遗迹"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: -6.0d
+		}
+		{
+			id: "212710EFA03B6097"
+			tasks: [{
+				id: "4024963FC4A7A168"
+				structure: "minecraft:end_city"
+				title: "末地城"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: -4.5d
+		}
+		{
+			id: "7A06AA2FF2084A28"
+			tasks: [{
+				id: "45D812E5313431E3"
+				structure: "twilightforest:naga_courtyard"
+				title: "娜迦庭院"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: -3.0d
+		}
+		{
+			id: "0AA236DBF9AF89EA"
+			tasks: [{
+				id: "7FF6D9034B150126"
+				structure: "twilightforest:lich_tower"
+				title: "巫妖塔"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: -3.0d
+		}
+		{
+			id: "430BF9B4C0805E9D"
+			tasks: [{
+				id: "1712D669B0FDEA59"
+				structure: "twilightforest:aurora_palace"
+				title: "极光宫殿"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: -3.0d
+		}
+		{
+			id: "0F53CFCA2AB44A95"
+			tasks: [{
+				id: "36F9FFE91657346D"
+				structure: "twilightforest:dark_tower"
+				title: "黑暗高塔"
+				type: "structure"
+			}]
+			x: -3.5d
+			y: -3.0d
+		}
+		{
+			id: "7E775F6F73374336"
+			tasks: [{
+				id: "53A7569E2E338D1A"
+				structure: "twilightforest:hydra_lair"
+				title: "九头蛇巢穴"
+				type: "structure"
+			}]
+			x: -1.5d
+			y: -3.0d
+		}
+		{
+			id: "5467AB3D257A70FC"
+			tasks: [{
+				id: "343EC27E68DD3EA3"
+				structure: "twilightforest:final_castle"
+				title: "终焉城堡"
+				type: "structure"
+			}]
+			x: 0.5d
+			y: -3.0d
+		}
+		{
+			id: "471B36889D9FF802"
+			tasks: [{
+				id: "049F8E8706D76D78"
+				structure: "twilightforest:quest_grove"
+				title: "谜题羊树丛"
+				type: "structure"
+			}]
+			x: 2.5d
+			y: -3.0d
+		}
+		{
+			id: "7680805B604EC536"
+			tasks: [{
+				id: "2AA6B259E010A36C"
+				structure: "aether:bronze_dungeon"
+				title: "青铜地牢"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: -1.5d
+		}
+		{
+			id: "59713667442A5046"
+			tasks: [{
+				id: "3A380BE1A44DDEC3"
+				structure: "aether:silver_dungeon"
+				title: "白银地牢"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: -1.5d
+		}
+		{
+			id: "4D7BDDFB8634BB47"
+			tasks: [{
+				id: "462115966DA8235E"
+				structure: "aether:gold_dungeon"
+				title: "黄金地牢"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: -1.5d
+		}
+		{
+			id: "27A80F90D7D58FF3"
+			tasks: [{
+				id: "4CD2C153A6EE42BD"
+				structure: "cataclysm:ancient_factory"
+				title: "古代工厂"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 0.0d
+		}
+		{
+			id: "55AF88B4811F8D29"
+			tasks: [{
+				id: "0DF17E8EB9164E82"
+				structure: "minecraft:ancient_city"
+				title: "远古城市"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: -7.5d
+		}
+		{
+			id: "364E5312B3E4DDC7"
+			tasks: [{
+				id: "1ACDB0EFA6234EDD"
+				structure: "cataclysm:sunken_city"
+				title: "沉沦之城"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 0.0d
+		}
+		{
+			id: "6E0B9223D64D5679"
+			tasks: [{
+				id: "050E41B73E12D218"
+				structure: "cataclysm:cursed_pyramid"
+				title: "诅咒金字塔"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: 0.0d
+		}
+		{
+			id: "437BE1555E85F2E0"
+			tasks: [{
+				id: "223C73E08196EE0D"
+				structure: "cataclysm:frosted_prison"
+				title: "苦寒监牢"
+				type: "structure"
+			}]
+			x: -3.5d
+			y: 0.0d
+		}
+		{
+			id: "3DB94FD93E86B8B7"
+			tasks: [{
+				id: "3B2A0DB657BCE603"
+				structure: "cataclysm:acropolis"
+				title: "卫城"
+				type: "structure"
+			}]
+			x: -1.5d
+			y: 0.0d
+		}
+		{
+			id: "797F057226F765C8"
+			tasks: [{
+				id: "3769F32562489E10"
+				structure: "cataclysm:soul_black_smith"
+				title: "灵魂锻造厂"
+				type: "structure"
+			}]
+			x: 0.5d
+			y: 0.0d
+		}
+		{
+			id: "13F6637F9D15FA00"
+			tasks: [{
+				id: "5C64125F7EEBC4FE"
+				structure: "cataclysm:burning_arena"
+				title: "烈焰竞技场"
+				type: "structure"
+			}]
+			x: 2.5d
+			y: 0.0d
+		}
+		{
+			id: "66EDEC3E66049025"
+			tasks: [{
+				id: "7F91068B8783F8DE"
+				structure: "cataclysm:ruined_citadel"
+				title: "废弃堡垒"
+				type: "structure"
+			}]
+			x: 4.5d
+			y: 0.0d
+		}
+		{
+			id: "664F54650DFD4E71"
+			tasks: [{
+				id: "3DF10B43BF772080"
+				structure: "mowziesmobs:wrought_chamber"
+				title: "锻造室"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 3.0d
+		}
+		{
+			id: "6CD2EEB3678BD1D8"
+			tasks: [{
+				id: "0FF0346E1D3E3553"
+				structure: "mowziesmobs:monastery"
+				title: "Monastery"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 3.0d
+		}
+		{
+			id: "73C9896667F6E8F3"
+			tasks: [{
+				id: "59A3AE5139681BD6"
+				structure: "mowziesmobs:umvuthana_grove"
+				title: "乌姆塔纳村落"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: 3.0d
+		}
+		{
+			id: "670E328640875CE0"
+			tasks: [{
+				id: "20F22EDEF62D9D6E"
+				structure: "eeeabsmobs:coreforge_ruins"
+				title: "机核哨站"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 1.5d
+		}
+		{
+			id: "7C726EEF6A4C505E"
+			tasks: [{
+				id: "5F8623F9D44C20E2"
+				structure: "eeeabsmobs:bloody_altar"
+				title: "血色祭坛"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 1.5d
+		}
+		{
+			id: "493E1E1D2A1C5EA6"
+			tasks: [{
+				id: "244BDA37E0FECBB4"
+				structure: "bosses_of_mass_destruction:obsidilith_arena"
+				title: "黑曜石浮岛"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 4.5d
+		}
+		{
+			id: "059428BDC16BC88D"
+			tasks: [{
+				id: "6B325204E809128C"
+				structure: "bosses_of_mass_destruction:lich_tower"
+				title: "巫妖塔"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 4.5d
+		}
+		{
+			id: "605244D714482C0F"
+			tasks: [{
+				id: "0C7E6831A97C08CE"
+				structure: "bosses_of_mass_destruction:void_blossom"
+				title: "虚空之花洞穴"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: 4.5d
+		}
+		{
+			id: "70B3648FA56BC923"
+			tasks: [{
+				id: "6ADB4AB554D4E0C4"
+				structure: "bosses_of_mass_destruction:gauntlet_arena"
+				title: "Gauntlet Arena"
+				type: "structure"
+			}]
+			x: -3.5d
+			y: 4.5d
+		}
+		{
+			id: "53DD317EEF079152"
+			tasks: [{
+				id: "13E7BB71CB530251"
+				structure: "irons_spellbooks:catacombs"
+				title: "地下墓穴"
+				type: "structure"
+			}]
+			x: -1.5d
+			y: 6.0d
+		}
+		{
+			id: "268C40FDCF60A75A"
+			tasks: [{
+				id: "2D70FD3A134EFD4F"
+				structure: "irons_spellbooks:citadel"
+				title: "城堡"
+				type: "structure"
+			}]
+			x: 0.5d
+			y: 6.0d
+		}
+		{
+			id: "4F76D3F1D280CD56"
+			tasks: [{
+				id: "05A888D0BCFFF676"
+				structure: "irons_spellbooks:evoker_fort"
+				title: "唤魔者要塞"
+				type: "structure"
+			}]
+			x: -3.5d
+			y: 6.0d
+		}
+		{
+			id: "3B1DD04BD717355D"
+			tasks: [{
+				id: "2185EE1803E80716"
+				structure: "irons_spellbooks:mangrove_hut"
+				title: "药剂师居所"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 6.0d
+		}
+		{
+			id: "5CAD0383E3A6C97D"
+			tasks: [{
+				id: "39900717242FA89D"
+				structure: "irons_spellbooks:mountain_tower"
+				title: "冰霜术士塔"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: 6.0d
+		}
+		{
+			id: "634597FD3BB5610C"
+			tasks: [{
+				id: "5289AD2100FBCEFE"
+				structure: "irons_spellbooks:pyromancer_tower"
+				title: "炽焰术士塔"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 6.0d
+		}
+		{
+			id: "538EFFC9DBFEA395"
+			tasks: [{
+				id: "068130E8B6E7F2A0"
+				title: "地牢浮现之时"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 7.5d
+		}
+		{
+			id: "622D43E53391CB3B"
+			tasks: [{
+				id: "74970AC24EBFF966"
+				title: "ATi Structures"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 9.0d
+		}
+		{
+			id: "5B2A899266EE7628"
+			tasks: [{
+				id: "331836F38D03113B"
+				title: "天境"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -1.5d
+		}
+		{
+			id: "64DA4382710BE788"
+			tasks: [{
+				id: "43EEB68CEF169B88"
+				title: "灾变"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 0.0d
+		}
+		{
+			id: "48A614BA7DEB1509"
+			tasks: [{
+				id: "2DAEE751254E0ECE"
+				title: "EEEAB"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 1.5d
+		}
+		{
+			id: "4A4771DE13DCF6A5"
+			tasks: [{
+				id: "37A7510542A6DFD7"
+				title: "MMobs"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 3.0d
+		}
+		{
+			id: "2E1BF7458255B072"
+			tasks: [{
+				id: "4ABF84128B8BE1D6"
+				title: "祸乱鬼魅"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 4.5d
+		}
+		{
+			id: "362CD98F033A7FC4"
+			tasks: [{
+				id: "7A9B69A97AFAC78D"
+				title: "铁魔法"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 6.0d
+		}
+		{
+			id: "017AD50443C17AE9"
+			tasks: [{
+				id: "07251CE9B7982B26"
+				structure: "dungeons_arise:coliseum"
+				title: "斗兽场"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 7.5d
+		}
+		{
+			id: "15AC9D2900F08DCD"
+			tasks: [{
+				id: "2A5E3A7DCDE2E577"
+				structure: "dungeons_arise:bandit_towers"
+				title: "疆盗塔楼"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 7.5d
+		}
+		{
+			id: "2E4AEAD41F6A4ACA"
+			tasks: [{
+				id: "1D00E1F269DB9B7C"
+				structure: "dungeons_arise:illager_windmill"
+				title: "灾厄风车"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: 7.5d
+		}
+		{
+			id: "617669AD1ACACDBB"
+			tasks: [{
+				id: "0C1320CAB360841D"
+				structure: "dungeons_arise:illager_fort"
+				title: "灾厄城堡"
+				type: "structure"
+			}]
+			x: -3.5d
+			y: 7.5d
+		}
+		{
+			id: "6AD31D2692704642"
+			tasks: [{
+				id: "40F0843961B4D22D"
+				structure: "dungeons_arise:monastery"
+				title: "修道院"
+				type: "structure"
+			}]
+			x: -1.5d
+			y: 7.5d
+		}
+		{
+			id: "586C9DF6E677BB2F"
+			tasks: [{
+				id: "60B69759C76A150A"
+				structure: "dungeons_arise:thornborn_towers"
+				title: "荆棘城堡"
+				type: "structure"
+			}]
+			x: 0.5d
+			y: 7.5d
+		}
+		{
+			id: "1C2E8299ED26867F"
+			tasks: [{
+				id: "043BBBC897A0AB3E"
+				structure: "dungeons_arise:keep_kayra"
+				title: "创世神殿"
+				type: "structure"
+			}]
+			x: 2.5d
+			y: 7.5d
+		}
+		{
+			id: "3C9BEAFCEDBA07BF"
+			tasks: [{
+				id: "662998915B79FAEC"
+				structure: "dungeons_arise:aviary"
+				title: "幻梦塔楼"
+				type: "structure"
+			}]
+			x: 4.5d
+			y: 7.5d
+		}
+		{
+			id: "33C6A91A0D8A9A93"
+			tasks: [{
+				id: "782F748A3306B746"
+				structure: "dungeons_arise:shiraz_palace"
+				title: "幻梦塔楼"
+				type: "structure"
+			}]
+			x: 6.5d
+			y: 7.5d
+		}
+		{
+			id: "496C9D58117F40E9"
+			tasks: [{
+				id: "7B7EAC1C9C99474E"
+				structure: "dungeons_arise:heavenly_challenger"
+				title: "天际挑战者 "
+				type: "structure"
+			}]
+			x: 8.5d
+			y: 7.5d
+		}
+		{
+			id: "363B5137D5D7E195"
+			tasks: [{
+				id: "01B82ABA04FF1383"
+				structure: "dungeons_arise:foundry"
+				title: "铸造厂"
+				type: "structure"
+			}]
+			x: 10.5d
+			y: 7.5d
+		}
+		{
+			id: "465B817165AB7C69"
+			tasks: [{
+				id: "245BF880E471AD03"
+				structure: "ati_structures:ancient_temple"
+				title: "Ancient Temple"
+				type: "structure"
+			}]
+			x: -9.5d
+			y: 9.0d
+		}
+		{
+			id: "2969CC2BFE75428B"
+			tasks: [{
+				id: "69AA919263217A24"
+				structure: "ati_structures:desert_outpost"
+				title: "Desert Outpost"
+				type: "structure"
+			}]
+			x: -7.5d
+			y: 9.0d
+		}
+		{
+			id: "53187249236F37FC"
+			tasks: [{
+				id: "52ACA948068C0BD1"
+				structure: "ati_structures:fortified_temple"
+				title: "Fortified Temple"
+				type: "structure"
+			}]
+			x: -5.5d
+			y: 9.0d
+		}
+		{
+			id: "606486D385EF64A6"
+			tasks: [{
+				id: "71EA2BBA61E60781"
+				structure: "ati_structures:granite_fort"
+				title: "Granite Fort"
+				type: "structure"
+			}]
+			x: -3.5d
+			y: 9.0d
+		}
+		{
+			id: "5FD118372EDCEFD9"
+			tasks: [{
+				id: "640E11775B0A2909"
+				structure: "ati_structures:jungle_grotto"
+				title: "Jungle Grotto"
+				type: "structure"
+			}]
+			x: -1.5d
+			y: 9.0d
+		}
+		{
+			id: "245739BD87D0ED24"
+			tasks: [{
+				id: "1FFEC6A79536A481"
+				structure: "ati_structures:marble_chateau"
+				title: "Marble Chateau"
+				type: "structure"
+			}]
+			x: 0.5d
+			y: 9.0d
+		}
+		{
+			id: "48D2296DC3EA757A"
+			tasks: [{
+				id: "0DB678359D1ED70C"
+				structure: "ati_structures:monastery_tower"
+				title: "Monastery Tower"
+				type: "structure"
+			}]
+			x: 2.5d
+			y: 9.0d
+		}
+		{
+			id: "37008E316FCDE94A"
+			tasks: [{
+				id: "2EBBE546628EEAE3"
+				structure: "ati_structures:ruined_castle"
+				title: "Ruined Castle"
+				type: "structure"
+			}]
+			x: 4.5d
+			y: 9.0d
+		}
+		{
+			id: "60F375AED67FC8BB"
+			tasks: [{
+				id: "306EEF85C28EEFE8"
+				structure: "ati_structures:steam_house"
+				title: "Steam House"
+				type: "structure"
+			}]
+			x: 6.5d
+			y: 9.0d
+		}
+		{
+			id: "483F064BCBB3BC12"
+			tasks: [{
+				id: "633EC3AEC0D7C6E2"
+				structure: "ati_structures:wither_keep"
+				title: "Wither Keep"
+				type: "structure"
+			}]
+			x: 8.5d
+			y: 9.0d
+		}
+		{
+			id: "2585282AB384421D"
+			tasks: [{
+				id: "6CB753C3F0921ED3"
+				structure: "ati_structures:sinking_temple"
+				title: "Sinking Temple"
+				type: "structure"
+			}]
+			x: 10.5d
+			y: 9.0d
+		}
+	]
+	title: "结构列表"
+}

@@ -1,0 +1,686 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "1EDEED0DD9F40D42"
+	group: "636843B9859B5209"
+	id: "1EDEED0DD9F40D42"
+	order_index: 2
+	quest_links: [ ]
+	quests: [
+		{
+			id: "5A0E38EF7D66CC62"
+			tasks: [{
+				id: "1F34E0B773FFEC37"
+				title: "原版"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -8.5d
+		}
+		{
+			id: "3A670D4EAE0E59E7"
+			tasks: [{
+				id: "48FDA92130C8945F"
+				title: "灾变"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -6.5d
+		}
+		{
+			id: "1ADF325B64972432"
+			tasks: [{
+				id: "1FDF17E59C396489"
+				title: "暮色森林"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -4.5d
+		}
+		{
+			id: "6AACABD347D8A001"
+			tasks: [{
+				id: "23C17542B15B6EE7"
+				title: "天境"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -2.5d
+		}
+		{
+			id: "10784D94B9B9CF42"
+			tasks: [{
+				id: "3BDC558D49B9F1A0"
+				title: "EEEAB"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: -0.5d
+		}
+		{
+			id: "2170700F0FB19170"
+			tasks: [{
+				id: "26F7FD4BA1339967"
+				title: "MMobs"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 1.5d
+		}
+		{
+			id: "12F6738EC6F98C34"
+			tasks: [{
+				entity: "minecraft:warden"
+				id: "315F3A3ED572E5E5"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: -8.5d
+		}
+		{
+			id: "6C82D3030202E4BC"
+			tasks: [{
+				entity: "minecraft:ender_dragon"
+				id: "294E7D4A0CE40778"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: -8.5d
+		}
+		{
+			id: "66D2D320804C0B42"
+			tasks: [{
+				entity: "minecraft:wither"
+				id: "5BCCFE967F2A9EA8"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: -8.5d
+		}
+		{
+			id: "23673A43A5CE8E81"
+			tasks: [{
+				id: "333AD0A7CBBFD275"
+				title: " 祸乱鬼魅"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 3.5d
+		}
+		{
+			id: "0B1487EFA0CE873E"
+			tasks: [{
+				id: "78F02DC1737B9A56"
+				title: "铁魔法"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 5.5d
+		}
+		{
+			id: "4BA211ADAA4AF1B5"
+			tasks: [{
+				entity: "irons_spellbooks:pyromancer"
+				id: "0ACF86E93369840D"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: 5.5d
+		}
+		{
+			id: "583EDAA65979B24A"
+			tasks: [{
+				entity: "irons_spellbooks:archevoker"
+				id: "5D26599010051FA1"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: 5.5d
+		}
+		{
+			id: "3DD59204AB81C326"
+			tasks: [{
+				entity: "irons_spellbooks:cryomancer"
+				id: "78359A435DDDB031"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: 5.5d
+		}
+		{
+			id: "3F103C2BF91226C2"
+			tasks: [{
+				entity: "irons_spellbooks:priest"
+				id: "3090E5EE37B9782F"
+				type: "kill"
+				value: 1L
+			}]
+			x: -7.0d
+			y: 5.5d
+		}
+		{
+			id: "63D46875545D6857"
+			tasks: [{
+				entity: "irons_spellbooks:apothecarist"
+				id: "471607149B3029AA"
+				type: "kill"
+				value: 1L
+			}]
+			x: -6.0d
+			y: 5.5d
+		}
+		{
+			id: "18DBC678A02826DC"
+			tasks: [{
+				entity: "irons_spellbooks:citadel_keeper"
+				id: "49D2076BCA24B4E1"
+				type: "kill"
+				value: 1L
+			}]
+			x: -5.0d
+			y: 5.5d
+		}
+		{
+			id: "45500E1E1A2DD069"
+			tasks: [{
+				entity: "irons_spellbooks:dead_king"
+				id: "6AA55CE228C94B9B"
+				type: "kill"
+				value: 1L
+			}]
+			x: -4.0d
+			y: 5.5d
+		}
+		{
+			id: "20C11151725549EA"
+			tasks: [{
+				entity: "irons_spellbooks:fire_boss"
+				id: "3109AFA930EC127E"
+				type: "kill"
+				value: 1L
+			}]
+			x: -3.0d
+			y: 5.5d
+		}
+		{
+			id: "711E5FF332027B95"
+			tasks: [{
+				entity: "bosses_of_mass_destruction:lich"
+				id: "6BED55E2BFFE3F76"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: 3.5d
+		}
+		{
+			id: "79FB2DFE13CD4E0B"
+			tasks: [{
+				entity: "bosses_of_mass_destruction:void_blossom"
+				id: "4E08E66EC6F968FD"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: 3.5d
+		}
+		{
+			id: "276D09AFE558F9A6"
+			tasks: [{
+				entity: "bosses_of_mass_destruction:obsidilith"
+				id: "0541C137DADBCF85"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: 3.5d
+		}
+		{
+			id: "653D6B17716AD810"
+			tasks: [{
+				entity: "bosses_of_mass_destruction:gauntlet"
+				id: "77D5A90738CF05B6"
+				type: "kill"
+				value: 1L
+			}]
+			x: -7.0d
+			y: 3.5d
+		}
+		{
+			id: "3F76F1FD275C991C"
+			tasks: [{
+				entity: "mowziesmobs:ferrous_wroughtnaut"
+				id: "631B1010D7DF1CC2"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: 1.5d
+		}
+		{
+			id: "416F879ED375DFF4"
+			tasks: [{
+				entity: "mowziesmobs:frostmaw"
+				id: "7067268BA00D2049"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: 1.5d
+		}
+		{
+			id: "760617C8A33FC9F1"
+			tasks: [{
+				entity: "mowziesmobs:sculptor"
+				id: "209BF1A545636D3D"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: 1.5d
+		}
+		{
+			id: "092D5AA283B0B6E3"
+			tasks: [{
+				entity: "mowziesmobs:umvuthi"
+				id: "03C936BBB136885B"
+				type: "kill"
+				value: 1L
+			}]
+			x: -7.0d
+			y: 1.5d
+		}
+		{
+			id: "4BB5CD03BCDD1F24"
+			tasks: [{
+				entity: "eeeabsmobs:corpse_warlock"
+				id: "466E7FDF9C016C5E"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: -0.5d
+		}
+		{
+			id: "36CD9CC87E5C36F0"
+			tasks: [{
+				entity: "eeeabsmobs:nameless_guardian"
+				id: "5E4DBE3339A5AF0A"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: -0.5d
+		}
+		{
+			id: "702F24037DE361B4"
+			tasks: [{
+				entity: "aether:slider"
+				id: "6FD872CA60814350"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: -2.5d
+		}
+		{
+			id: "0207EFE616A46CC4"
+			tasks: [{
+				entity: "aether:valkyrie_queen"
+				id: "406C34EAF5A2BFF0"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: -2.5d
+		}
+		{
+			id: "0FCDF89FE6DDBFD2"
+			tasks: [{
+				entity: "aether:sun_spirit"
+				id: "7EF68E4DD8BD20E9"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: -2.5d
+		}
+		{
+			id: "2C715308B4D70343"
+			tasks: [{
+				entity: "twilightforest:naga"
+				id: "14E03882BDECC00D"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: -4.5d
+		}
+		{
+			id: "6EC8E34865E04099"
+			tasks: [{
+				entity: "twilightforest:lich"
+				id: "313A338926BF2D8A"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: -4.5d
+		}
+		{
+			id: "747B18FAFD7172AA"
+			tasks: [{
+				entity: "twilightforest:snow_queen"
+				id: "0C720A23664E8139"
+				type: "kill"
+				value: 1L
+			}]
+			x: -7.0d
+			y: -4.5d
+		}
+		{
+			id: "39D794AAFC4D008B"
+			tasks: [{
+				entity: "twilightforest:alpha_yeti"
+				id: "2B394F65CCCFE3D5"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: -4.5d
+		}
+		{
+			id: "3C3C094459B8D1B0"
+			tasks: [{
+				entity: "twilightforest:minoshroom"
+				id: "03D2819CA2F2CB50"
+				type: "kill"
+				value: 1L
+			}]
+			x: -6.0d
+			y: -4.5d
+		}
+		{
+			id: "58A11C21ABD92FF1"
+			tasks: [{
+				entity: "twilightforest:hydra"
+				id: "57919D01C1B994F9"
+				type: "kill"
+				value: 1L
+			}]
+			x: -5.0d
+			y: -4.5d
+		}
+		{
+			id: "4382C19511C69F18"
+			tasks: [{
+				entity: "twilightforest:knight_phantom"
+				id: "0ADDB9B4DD6F7EF7"
+				type: "kill"
+				value: 1L
+			}]
+			x: -4.0d
+			y: -4.5d
+		}
+		{
+			id: "037996C3C176760C"
+			tasks: [{
+				entity: "twilightforest:ur_ghast"
+				id: "4C13DAC2AF0DE7B9"
+				type: "kill"
+				value: 1L
+			}]
+			x: -3.0d
+			y: -4.5d
+		}
+		{
+			id: "1BB808C8D48DB5DE"
+			tasks: [{
+				entity: "cataclysm:ender_guardian"
+				id: "68022DC99649C742"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: -6.5d
+		}
+		{
+			id: "57B7CBB0BEC3CBF2"
+			tasks: [{
+				entity: "cataclysm:ignis"
+				id: "2D8FA29774DD3FE9"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: -6.5d
+		}
+		{
+			id: "217C0300AEC770EC"
+			tasks: [{
+				entity: "cataclysm:netherite_monstrosity"
+				id: "2F19B158B7B47B2F"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: -6.5d
+		}
+		{
+			id: "559B8951B14E880E"
+			tasks: [{
+				entity: "cataclysm:the_harbinger"
+				id: "0F1F91B76FF9DF59"
+				type: "kill"
+				value: 1L
+			}]
+			x: -7.0d
+			y: -6.5d
+		}
+		{
+			id: "6E66479126A28183"
+			tasks: [{
+				entity: "cataclysm:the_leviathan"
+				id: "45662886E9D6D0D8"
+				type: "kill"
+				value: 1L
+			}]
+			x: -6.0d
+			y: -6.5d
+		}
+		{
+			id: "502026A795448694"
+			tasks: [{
+				entity: "cataclysm:ancient_remnant"
+				id: "4C032E180CC6DE18"
+				type: "kill"
+				value: 1L
+			}]
+			x: -5.0d
+			y: -6.5d
+		}
+		{
+			id: "52B9B5BFA5F46402"
+			tasks: [{
+				entity: "cataclysm:maledictus"
+				id: "2F6635A1E27E097D"
+				type: "kill"
+				value: 1L
+			}]
+			x: -4.0d
+			y: -6.5d
+		}
+		{
+			id: "2B2F7A672A9A5656"
+			tasks: [{
+				entity: "cataclysm:scylla"
+				id: "5DE9D5974E7A3139"
+				type: "kill"
+				value: 1L
+			}]
+			x: -3.0d
+			y: -6.5d
+		}
+		{
+			id: "52B9EDDB9F78B33A"
+			tasks: [{
+				id: "476040CA5F123A91"
+				title: "生于混沌"
+				type: "checkmark"
+			}]
+			x: -11.5d
+			y: 7.5d
+		}
+		{
+			id: "6BDEF4F29F21AD13"
+			tasks: [{
+				entity: "born_in_chaos_v1:nightmare_stalker"
+				id: "0730EF1CEE7B8C2D"
+				title: "梦魇循踪兽"
+				type: "kill"
+				value: 1L
+			}]
+			x: -10.0d
+			y: 7.5d
+		}
+		{
+			id: "027BDC2C754C3FC4"
+			tasks: [{
+				entity: "born_in_chaos_v1:fallen_chaos_knight"
+				id: "6829487C7B9D9DA7"
+				title: "堕落混沌骑士"
+				type: "kill"
+				value: 1L
+			}]
+			x: -9.0d
+			y: 7.5d
+		}
+		{
+			id: "44A23BD423901698"
+			tasks: [{
+				entity: "born_in_chaos_v1:sir_pumpkinhead"
+				id: "6D351548292538C1"
+				title: "南瓜伯爵"
+				type: "kill"
+				value: 1L
+			}]
+			x: -8.0d
+			y: 7.5d
+		}
+		{
+			id: "18E874D3FB86DA3E"
+			tasks: [{
+				entity: "born_in_chaos_v1:dire_hound_leader"
+				id: "314BE0279A437447"
+				title: "骇狼首领"
+				type: "kill"
+				value: 1L
+			}]
+			x: -7.0d
+			y: 7.5d
+		}
+		{
+			id: "6D2555DBF6DDC5EB"
+			tasks: [{
+				entity: "born_in_chaos_v1:glutton_fish"
+				id: "0FC6D137F052B3CD"
+				title: "巨食人鱼"
+				type: "kill"
+				value: 1L
+			}]
+			x: -6.0d
+			y: 7.5d
+		}
+		{
+			id: "2606AFFDEED6C70E"
+			tasks: [{
+				entity: "born_in_chaos_v1:missioner"
+				id: "432ADB1E94F03C91"
+				title: "传教士"
+				type: "kill"
+				value: 1L
+			}]
+			x: -5.0d
+			y: 7.5d
+		}
+		{
+			id: "0DA828101025DE4A"
+			tasks: [{
+				entity: "born_in_chaos_v1:sir_the_headless"
+				id: "0D1924B3CD1F3288"
+				title: "无头伯爵"
+				type: "kill"
+				value: 1L
+			}]
+			x: -4.0d
+			y: 7.5d
+		}
+		{
+			id: "13DD29393B1755C9"
+			tasks: [{
+				entity: "born_in_chaos_v1:lord_the_headless"
+				id: "52AD68CD306872F0"
+				title: "无头领主"
+				type: "kill"
+				value: 1L
+			}]
+			x: -3.0d
+			y: 7.5d
+		}
+		{
+			id: "22C04AEEED29600E"
+			tasks: [{
+				entity: "born_in_chaos_v1:lifestealer"
+				id: "1E509F08213B76DA"
+				title: "窃命者"
+				type: "kill"
+				value: 1L
+			}]
+			x: -2.0d
+			y: 7.5d
+		}
+		{
+			id: "6FBFBF2FE032DD00"
+			tasks: [{
+				entity: "born_in_chaos_v1:mother_spider"
+				id: "54FE007E19546DE7"
+				title: "蜘蛛母体"
+				type: "kill"
+				value: 1L
+			}]
+			x: -1.0d
+			y: 7.5d
+		}
+		{
+			id: "70C40FDB48E062AF"
+			tasks: [{
+				entity: "born_in_chaos_v1:krampus"
+				id: "7A767D245F4D11D7"
+				title: "坎普斯"
+				type: "kill"
+				value: 1L
+			}]
+			x: 0.0d
+			y: 7.5d
+		}
+		{
+			id: "7404C8E5ADC826DF"
+			tasks: [{
+				entity: "born_in_chaos_v1:lord_pumpkinhead"
+				id: "7A6BA374FD2E9F60"
+				title: "南瓜领主"
+				type: "kill"
+				value: 1L
+			}]
+			x: 1.0d
+			y: 7.5d
+		}
+	]
+	title: "怪物列表"
+}

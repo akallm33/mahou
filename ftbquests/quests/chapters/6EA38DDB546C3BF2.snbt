@@ -1,0 +1,11 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "6EA38DDB546C3BF2"
+	group: "636843B9859B5209"
+	id: "6EA38DDB546C3BF2"
+	order_index: 0
+	quest_links: [ ]
+	quests: [ ]
+	title: "法杖列表"
+}
