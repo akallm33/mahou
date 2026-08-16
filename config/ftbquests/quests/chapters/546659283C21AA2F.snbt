@@ -36,7 +36,7 @@
 			entity_vis_size: 1.0f
 			id: "456A09A8DD4DC36E"
 			rewards: [{
-				command: "/execute in mahou:modfusion_dimension run tp @p 0 100 0"
+				command: "/execute in mahou:modfusion_dimension run tp @p 0 161 0"
 				elevate_perms: true
 				id: "37ED391F9A092C4E"
 				type: "command"

@@ -1,29 +1,33 @@
-global.FusionConfig = {
+global.FusionConfig={
 
 
-dimension:
-"mahou:modfusion_dimension",
+    //岛数量
+    islandCount:20,
 
 
-islandCount:20,
+    //生成范围
+    generationRange:1000,
 
 
-generationRange:2000,
+    //出生点保护半径
+    spawnProtectionRadius:300,
 
 
-minRadius:40,
+
+    //岛大小
+
+    minRadius:30,
+
+    maxRadius:100,
 
 
-maxRadius:120,
+    //高度
 
+    minHeight:15,
 
-minHeight:30,
+    maxHeight:50,
 
+    //岛间距
 
-maxHeight:80,
-
-
-collisionPadding:80
-
-
+    collisionPadding:40
 }

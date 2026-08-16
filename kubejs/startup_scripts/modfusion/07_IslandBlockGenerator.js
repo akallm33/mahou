@@ -1,6 +1,6 @@
 // 真正放置方块
 
-var BlockPos =
+var BlockPos=
 Java.loadClass(
 "net.minecraft.core.BlockPos"
 )
@@ -14,12 +14,19 @@ global.IslandBlockGenerator={
 generate:function(level,island){
 
 
+
 console.log(
-"[ModFusion] Generating island blocks"
+"[ModFusion] Generating island:",
+island.x,
+island.z
 )
 
-var radius =
+
+
+var radius=
+Math.floor(
 island.radius
+)
 
 
 
@@ -38,7 +45,7 @@ z++
 
 
 
-var dist =
+var distance=
 Math.sqrt(
 x*x+z*z
 )
@@ -46,18 +53,20 @@ x*x+z*z
 
 
 if(
-dist>radius
+distance>radius
 )
 continue
 
 
 
-var factor =
-1-dist/radius
+// 中心厚，边缘薄
+
+var factor=
+1-distance/radius
 
 
 
-var height =
+var height=
 Math.floor(
 factor*island.height
 )
@@ -71,13 +80,16 @@ y++
 ){
 
 
-var blockState
+var state
+
+
+
 if(
 y==height-1
 )
 {
 
-blockState =
+state=
 Block.getBlock(
 "minecraft:grass_block"
 )
@@ -87,11 +99,11 @@ Block.getBlock(
 }
 
 else if(
-y>height-6
+y>height-5
 )
 {
 
-blockState =
+state=
 Block.getBlock(
 "minecraft:dirt"
 )
@@ -103,7 +115,7 @@ Block.getBlock(
 else
 {
 
-blockState =
+state=
 Block.getBlock(
 "minecraft:stone"
 )
@@ -112,7 +124,9 @@ Block.getBlock(
 
 }
 
-var pos =
+
+
+var pos=
 BlockPos.containing(
 island.x+x,
 island.y-y,
@@ -120,22 +134,23 @@ island.z+z
 )
 
 
+
 level.getChunk(
-pos.getX() >> 4,
-pos.getZ() >> 4
+pos.getX()>>4,
+pos.getZ()>>4
 )
+
 
 
 level.setBlock(
 pos,
-blockState,
+state,
 3
 )
 
 
 
 }
-
 
 
 }
@@ -147,7 +162,7 @@ blockState,
 
 
 console.log(
-"[ModFusion] Island block generation finished"
+"[ModFusion] Island finished"
 )
 
 

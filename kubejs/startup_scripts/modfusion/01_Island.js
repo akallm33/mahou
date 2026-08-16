@@ -1,10 +1,18 @@
 // 岛屿数据对象
 
-global.Island = function(data){
+console.log(
+"[ModFusion] Loading Island class"
+)
+
+
+
+global.Island=function(data){
 
 
 this.x=data.x
+
 this.y=data.y
+
 this.z=data.z
 
 
@@ -13,16 +21,19 @@ this.radius=data.radius
 this.height=data.height
 
 
-this.building=null
+this.biome=data.biome || "plains"
 
-this.biome=null
+this.building=data.building || null
+
 
 
 }
 
 
 
-global.Island.prototype.distance=function(other){
+// 判断两个岛是否重叠
+
+global.Island.prototype.isOverlap=function(other){
 
 
 var dx=this.x-other.x
@@ -30,22 +41,26 @@ var dx=this.x-other.x
 var dz=this.z-other.z
 
 
-return Math.sqrt(
+var distance=
+Math.sqrt(
 dx*dx+dz*dz
 )
 
-}
 
 
-
-global.Island.prototype.isOverlap=function(other){
-
-
-return this.distance(other)
-<
+return distance <
+(
 this.radius+
 other.radius+
 global.FusionConfig.collisionPadding
+)
+
 
 
 }
+
+
+
+console.log(
+"[ModFusion] Island class loaded"
+)
