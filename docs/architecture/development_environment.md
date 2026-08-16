@@ -1,0 +1,1353 @@
+# Development Environment
+
+## 1. 文档目的
+
+本文记录 Mahou 项目当前使用的本地开发环境、Minecraft/PCL 运行环境、Git 仓库之间的关系，以及为什么采用这种配置方式。
+
+这份文档不仅用于人工查阅，也用于让后续接手项目的 AI/GPT 能够快速理解：
+
+- Mahou 的代码实际存放在哪里；
+- Minecraft 实际从哪里读取这些代码；
+- 为什么 GitHub 上没有 `mods/` 和大部分 `config/`；
+- 哪些文件属于项目内容；
+- 哪些文件只是本地运行状态；
+- 为什么项目使用 Windows Junction；
+- 后续新增或修改第三方 Mod 配置时应该如何处理；
+- Git 提交时应该避免哪些操作。
+
+当前的核心原则是：
+
+> Git 仓库保存 Mahou 主动开发和维护的内容；Minecraft/PCL 负责实际运行；Junction 将二者连接起来；`.gitignore` 用于划分项目内容和本地运行状态。
+
+---
+
+# 2. 当前开发环境
+
+## 2.1 Git 仓库
+
+Mahou 的 Git 仓库位于：
+
+```text
+E:\MinecraftModPack\mahou
+```
+
+GitHub 仓库：
+
+```text
+akallm33/mahou
+```
+
+该目录是项目开发的主要工作目录。
+
+VS Code 应主要打开并编辑这个目录，而不是直接编辑 PCL 实例中的文件。
+
+当前主要项目内容包括：
+
+```text
+mahou/
+├─ config/
+│  └─ ftbquests/
+│
+├─ kubejs/
+│
+├─ docs/
+│
+└─ .gitignore
+```
+
+此外，本地还存在：
+
+```text
+mods/
+```
+
+以及大量第三方 Mod 自动生成的：
+
+```text
+config/
+```
+
+内容，但其中大部分目前不进入 Git。
+
+---
+
+## 2.2 Minecraft / PCL 开发实例
+
+当前 PCL 开发实例位于：
+
+```text
+E:\Minecraft\.minecraft\versions\Mahou-Dev
+```
+
+这个目录是 Minecraft 实际运行时使用的实例目录。
+
+它负责保存 Minecraft/PCL 自身的运行内容，例如：
+
+```text
+Mahou-Dev/
+├─ mods/
+├─ config/
+├─ kubejs/
+├─ saves/
+├─ resourcepacks/
+├─ screenshots/
+├─ logs/
+├─ crash-reports/
+├─ PCL/
+├─ Mahou-Dev.jar
+└─ Mahou-Dev.json
+```
+
+但其中部分目录实际上并不保存自己的实体文件，而是通过 Windows Junction 指向 Git 仓库。
+
+---
+
+# 3. 为什么 Git 仓库和 PCL 实例分开
+
+没有直接把 Git 仓库放进 Minecraft 实例目录，主要是为了把：
+
+```text
+项目源码
+```
+
+与：
+
+```text
+游戏运行状态
+```
+
+分开。
+
+Minecraft 运行过程中会产生大量并不属于 Mahou 项目源码的内容，例如：
+
+```text
+saves/
+logs/
+crash-reports/
+screenshots/
+options.txt
+```
+
+各种 Mod 还会频繁修改：
+
+```text
+config/
+```
+
+中的配置文件。
+
+如果直接把整个 Minecraft 实例当成 Git 仓库，会导致：
+
+```text
+启动一次游戏
+↓
+几十个文件变化
+↓
+git status 被大量运行时信息污染
+↓
+真正的代码修改反而难以识别
+```
+
+因此当前采用：
+
+```text
+Git repository
++
+PCL runtime instance
++
+Windows Junction
+```
+
+三者结合的方案。
+
+---
+
+# 4. Junction 结构
+
+## 4.1 当前 Junction
+
+PCL 实例中的以下三个目录通过 Windows Junction 指向 Git 仓库：
+
+```text
+E:\Minecraft\.minecraft\versions\Mahou-Dev\mods
+    ->
+E:\MinecraftModPack\mahou\mods
+```
+
+```text
+E:\Minecraft\.minecraft\versions\Mahou-Dev\config
+    ->
+E:\MinecraftModPack\mahou\config
+```
+
+```text
+E:\Minecraft\.minecraft\versions\Mahou-Dev\kubejs
+    ->
+E:\MinecraftModPack\mahou\kubejs
+```
+
+可以概括为：
+
+```text
+Mahou-Dev
+│
+├─ mods   ───────┐
+├─ config ───────┼──> Git repository
+├─ kubejs ───────┘
+│
+├─ saves
+├─ logs
+├─ screenshots
+└─ ...
+```
+
+其中：
+
+```text
+mods/
+config/
+kubejs/
+```
+
+是 Git 仓库和 Minecraft 运行环境共享的。
+
+而：
+
+```text
+saves/
+logs/
+screenshots/
+crash-reports/
+PCL/
+```
+
+等仍然只属于 PCL 实例自身。
+
+---
+
+## 4.2 Junction 的作用
+
+这种结构意味着：
+
+```text
+VS Code 修改 Git 仓库
+        ↓
+实际上修改的是同一批文件
+        ↓
+PCL 启动 Minecraft
+        ↓
+Minecraft 直接读取修改后的内容
+```
+
+所以开发过程中不需要：
+
+```text
+修改代码
+↓
+复制 kubejs
+↓
+复制 config
+↓
+启动 Minecraft
+```
+
+而可以直接：
+
+```text
+修改代码
+↓
+启动 / reload Minecraft
+↓
+测试
+```
+
+---
+
+# 5. Junction 的创建方式
+
+当前 Junction 是在 PowerShell 中创建的。
+
+首先定义路径：
+
+```powershell
+$game = "E:\Minecraft\.minecraft\versions\Mahou-Dev"
+$repo = "E:\MinecraftModPack\mahou"
+```
+
+然后分别建立：
+
+```powershell
+New-Item -ItemType Junction -Path "$game\mods" -Target "$repo\mods"
+```
+
+```powershell
+New-Item -ItemType Junction -Path "$game\config" -Target "$repo\config"
+```
+
+```powershell
+New-Item -ItemType Junction -Path "$game\kubejs" -Target "$repo\kubejs"
+```
+
+在建立 Junction 前，目标位置不能已经存在普通同名目录。
+
+例如：
+
+```text
+Mahou-Dev\mods
+```
+
+如果原本只是一个空文件夹，需要先删除该空文件夹，再创建 Junction。
+
+---
+
+# 6. 如何检查 Junction
+
+PowerShell 中可以使用：
+
+```powershell
+Get-Item "E:\Minecraft\.minecraft\versions\Mahou-Dev\mods"
+Get-Item "E:\Minecraft\.minecraft\versions\Mahou-Dev\config"
+Get-Item "E:\Minecraft\.minecraft\versions\Mahou-Dev\kubejs"
+```
+
+正常情况下应显示类似：
+
+```text
+LinkType : Junction
+```
+
+并显示对应 Target。
+
+也可以使用：
+
+```powershell
+Get-ChildItem "E:\Minecraft\.minecraft\versions\Mahou-Dev\mods"
+```
+
+确认 Minecraft 实例能够看到 Git 仓库中的 Mod。
+
+---
+
+# 7. mods 的处理方式
+
+## 7.1 mods 的实际位置
+
+当前 Mod jar 实际保存在：
+
+```text
+E:\MinecraftModPack\mahou\mods
+```
+
+PCL 通过 Junction 直接读取该目录。
+
+因此：
+
+```text
+repo\mods
+```
+
+和：
+
+```text
+Mahou-Dev\mods
+```
+
+从使用效果上看是同一批文件。
+
+---
+
+## 7.2 mods 不进入 Git
+
+虽然 `mods/` 位于 Git 仓库目录中，但它不属于 Git 管理内容。
+
+`.gitignore` 中包含：
+
+```gitignore
+/mods/
+```
+
+因此：
+
+```text
+mods/*.jar
+```
+
+不会进入 GitHub。
+
+原因包括：
+
+- Mod jar 数量较多；
+- 文件体积较大；
+- 这些是项目依赖，而不是 Mahou 自身源码；
+- jar 本身可以通过 Modrinth、CurseForge 等来源重新获得；
+- 不希望 Git 仓库变成 Mod 文件分发仓库。
+
+因此需要注意：
+
+> 克隆 GitHub 仓库并不能自动获得完整可运行的 Mod 环境。
+
+新的开发者需要额外准备正确的 Mod 文件。
+
+---
+
+# 8. config 的处理策略
+
+## 8.1 config 的性质
+
+Minecraft 根目录下：
+
+```text
+config/
+```
+
+主要由各个第三方 Mod 使用。
+
+例如：
+
+```text
+config/cataclysm-common.toml
+config/embeddium-options.json
+config/xaero/
+config/ModernUI/
+config/irons_spellbooks_spell_config/
+config/jei/
+```
+
+这些文件通常由 Mod：
+
+```text
+第一次启动
+```
+
+或：
+
+```text
+运行过程中
+```
+
+自动创建和修改。
+
+---
+
+## 8.2 为什么目前不跟踪普通 config
+
+Mahou 当前尚未系统性开始修改第三方 Mod 的配置参数。
+
+Git 历史显示，大量普通 Mod 配置曾在开发任务线和维度时被一次性加入仓库。
+
+这些配置与对应 commit 的主要开发目标并没有明显关系，因此更可能属于：
+
+```text
+运行游戏
+↓
+Mod 自动生成 config
+↓
+一起被 git add
+```
+
+而不是：
+
+```text
+开发者明确修改某个 Mod
+↓
+决定这些参数属于 Mahou 游戏设计
+↓
+有意识地加入 Git
+```
+
+因此当前决定：
+
+> 第三方 Mod 的普通配置默认不属于 Mahou 主动维护的项目内容。
+
+---
+
+# 9. config 的 Git 规则
+
+当前 `.gitignore` 使用：
+
+```gitignore
+# Root mod configs are local/generated by default
+/config/*
+
+# FTB Quests contains Mahou project content
+!/config/ftbquests/
+!/config/ftbquests/**
+```
+
+其中：
+
+```gitignore
+/config/*
+```
+
+表示：
+
+> 根目录 `config/` 中所有内容默认忽略。
+
+然后：
+
+```gitignore
+!/config/ftbquests/
+```
+
+表示：
+
+> `config/ftbquests/` 是例外，不要忽略。
+
+而：
+
+```gitignore
+!/config/ftbquests/**
+```
+
+表示：
+
+> `ftbquests` 下面无论多少层目录，其内容都允许 Git 跟踪。
+
+所以当前 GitHub 中：
+
+```text
+config/
+└─ ftbquests/
+```
+
+是预期状态。
+
+---
+
+# 10. 为什么 FTB Quests 是例外
+
+虽然：
+
+```text
+config/ftbquests/
+```
+
+位于第三方 Mod 的配置目录下，但其内容实际上已经属于 Mahou 项目设计。
+
+例如其中包含：
+
+```text
+任务章节
+任务说明
+Boss/建筑任务
+玩法介绍
+```
+
+这些内容不是单纯的运行时默认配置。
+
+因此它属于：
+
+```text
+Mahou 主动维护的数据
+```
+
+而不是：
+
+```text
+第三方 Mod 自动状态
+```
+
+所以必须进入 Git。
+
+---
+
+# 11. 以后修改某个 Mod 配置怎么办
+
+当前策略不是：
+
+> 永远禁止第三方 config 进入 Git。
+
+而是：
+
+> 默认不跟踪；真正成为 Mahou 设计的一部分以后再跟踪。
+
+例如未来决定修改：
+
+```text
+config/cataclysm-common.toml
+```
+
+来调整 Cataclysm Boss 的数值。
+
+此时可以在 `.gitignore` 中增加：
+
+```gitignore
+!/config/cataclysm-common.toml
+```
+
+然后将该文件加入 Git。
+
+从这一刻开始：
+
+```text
+cataclysm-common.toml
+```
+
+就不再只是一个普通 Mod 配置，而是：
+
+```text
+Mahou 主动维护的 Cataclysm 配置
+```
+
+同理，如果以后要维护一个完整目录，例如：
+
+```text
+config/irons_spellbooks_spell_config/
+```
+
+则可以增加类似：
+
+```gitignore
+!/config/irons_spellbooks_spell_config/
+!/config/irons_spellbooks_spell_config/**
+```
+
+---
+
+# 12. config 管理的核心原则
+
+当前采用：
+
+```text
+默认忽略
+    ↓
+项目实际需要
+    ↓
+明确修改
+    ↓
+从 .gitignore 放出
+    ↓
+进入 Git
+```
+
+而不是：
+
+```text
+先把所有 config 纳入 Git
+    ↓
+以后再判断哪个有用
+```
+
+这样做的目的是让：
+
+```text
+“这个配置存在于 Git”
+```
+
+本身具有明确含义：
+
+> Mahou 已经主动开始维护这个配置。
+
+详细决策记录见：
+
+```text
+docs/decisions/002_config_tracking_strategy.md
+```
+
+---
+
+# 13. kubejs 的定位
+
+`kubejs/` 是 Mahou 当前自定义玩法开发的主要区域。
+
+与第三方 `config/` 不同：
+
+```text
+kubejs/
+```
+
+默认属于项目代码，因此正常进入 Git。
+
+当前主要包括：
+
+```text
+kubejs/
+├─ startup_scripts/
+├─ server_scripts/
+├─ client_scripts/
+├─ data/
+├─ assets/
+└─ config/
+```
+
+其中：
+
+```text
+startup_scripts/
+server_scripts/
+client_scripts/
+```
+
+分别对应 KubeJS 不同生命周期。
+
+Mahou 的：
+
+```text
+维度
+浮岛
+后续建筑
+网络
+魔法交互
+```
+
+等自定义逻辑主要在这里发展。
+
+---
+
+# 14. 注意 root config 和 kubejs/config 的区别
+
+以下两个目录不是一回事：
+
+```text
+config/
+```
+
+和：
+
+```text
+kubejs/config/
+```
+
+根目录：
+
+```text
+config/
+```
+
+主要属于第三方 Mod。
+
+而：
+
+```text
+kubejs/config/
+```
+
+属于 KubeJS 自身。
+
+当前 `.gitignore`：
+
+```gitignore
+/config/*
+```
+
+只针对：
+
+```text
+repo 根目录的 config/
+```
+
+不会自动忽略：
+
+```text
+kubejs/config/
+```
+
+因此以后判断是否需要跟踪：
+
+```text
+kubejs/config/*
+```
+
+应该单独进行，不要与 root `config/` 混为一谈。
+
+---
+
+# 15. Minecraft 运行数据
+
+以下内容主要属于本地运行状态：
+
+```text
+logs/
+saves/
+crash-reports/
+screenshots/
+resourcepacks/
+shaderpacks/
+local/
+options.txt
+```
+
+当前 `.gitignore` 中对应：
+
+```gitignore
+/logs/
+/saves/
+/crash-reports/
+/screenshots/
+/resourcepacks/
+/shaderpacks/
+/local/
+options.txt
+```
+
+它们不会进入 Git。
+
+---
+
+# 16. .gitignore 当前整体含义
+
+当前关键规则为：
+
+```gitignore
+*.zip
+
+# Local Minecraft runtime files
+/mods/
+/logs/
+/saves/
+/crash-reports/
+/screenshots/
+/resourcepacks/
+/shaderpacks/
+/local/
+options.txt
+
+# Root mod configs are local/generated by default
+/config/*
+
+# FTB Quests contains Mahou project content
+!/config/ftbquests/
+!/config/ftbquests/**
+```
+
+可以翻译成人话：
+
+```text
+所有 zip
+    → 不管
+
+mods
+    → 本地依赖，不管
+
+logs / saves / screenshots 等
+    → Minecraft 运行状态，不管
+
+config 中普通 Mod 配置
+    → 默认不管
+
+config/ftbquests
+    → Mahou 项目内容，要管
+```
+
+---
+
+# 17. Git 开发流程
+
+正常开发前建议：
+
+```powershell
+git pull
+```
+
+然后进行代码修改和游戏测试。
+
+测试完成后：
+
+```powershell
+git status
+```
+
+检查有哪些修改。
+
+---
+
+# 18. 不建议习惯性使用 git add -A
+
+Minecraft 和 Mod 环境容易产生各种自动文件。
+
+因此不推荐无脑执行：
+
+```powershell
+git add -A
+```
+
+因为这样可能把：
+
+```text
+运行状态
+测试数据
+自动生成文件
+无关配置
+```
+
+一起加入 commit。
+
+更推荐明确添加：
+
+```powershell
+git add kubejs
+```
+
+或者：
+
+```powershell
+git add docs
+```
+
+或者：
+
+```powershell
+git add config/ftbquests
+```
+
+或者指定某个文件：
+
+```powershell
+git add kubejs/server_scripts/example.js
+```
+
+---
+
+# 19. 提交前检查
+
+在 commit 前至少检查：
+
+```powershell
+git status
+```
+
+以及：
+
+```powershell
+git diff --cached --name-status
+```
+
+如果输出很长，为避免进入 Git 的 `less` 分页器，可以使用：
+
+```powershell
+git --no-pager diff --cached --name-status
+```
+
+提交前应确认：
+
+> 暂存区只包含本次开发有意修改的内容。
+
+---
+
+# 20. 关于 Git 中的 D
+
+有时执行：
+
+```powershell
+git rm --cached
+```
+
+后会看到：
+
+```text
+D config/xxx
+```
+
+这里的：
+
+```text
+D
+```
+
+表示：
+
+> 该文件将在下一次 commit 后从 Git 仓库中删除。
+
+它不一定意味着本地文件被删除。
+
+如果使用的是：
+
+```powershell
+git rm --cached
+```
+
+则本地文件仍然存在，只是不再由 Git 管理。
+
+这是此前清理第三方 Mod config 时使用的方法。
+
+---
+
+# 21. 当前仓库和本地目录并不完全相同
+
+需要明确区分：
+
+## GitHub 看到的
+
+大致是：
+
+```text
+mahou/
+├─ config/
+│  └─ ftbquests/
+│
+├─ kubejs/
+├─ docs/
+└─ .gitignore
+```
+
+## 本地实际存在的
+
+则可能是：
+
+```text
+mahou/
+├─ mods/
+│  ├─ *.jar
+│  └─ ...
+│
+├─ config/
+│  ├─ ftbquests/
+│  ├─ xaero/
+│  ├─ ModernUI/
+│  ├─ cataclysm-common.toml
+│  ├─ embeddium-options.json
+│  └─ ...
+│
+├─ kubejs/
+├─ docs/
+└─ .gitignore
+```
+
+这是正常现象。
+
+不要根据 GitHub 上没有：
+
+```text
+mods/
+```
+
+或：
+
+```text
+config/cataclysm-common.toml
+```
+
+就认为本地运行环境也没有这些文件。
+
+---
+
+# 22. 新开发者接手项目时
+
+如果另一名开发者 clone Mahou 仓库：
+
+```powershell
+git clone ...
+```
+
+他获得的是：
+
+```text
+项目源码
+```
+
+而不是：
+
+```text
+完整 Minecraft 实例
+```
+
+因此仍然需要：
+
+1. 准备 Minecraft 1.20.1 对应运行环境；
+2. 准备正确版本的 Forge；
+3. 准备项目所需 Mod jar；
+4. 创建自己的开发实例；
+5. 根据自己的实际路径建立 Junction，或者使用其他等价方式连接开发目录和运行目录。
+
+本文中的：
+
+```text
+E:\MinecraftModPack\mahou
+```
+
+和：
+
+```text
+E:\Minecraft\.minecraft\versions\Mahou-Dev
+```
+
+只是当前开发机器上的路径。
+
+其他开发者不需要使用完全相同的盘符和目录。
+
+真正需要保持的是逻辑关系：
+
+```text
+repo\mods
+    <- PCL mods
+
+repo\config
+    <- PCL config
+
+repo\kubejs
+    <- PCL kubejs
+```
+
+---
+
+# 23. AI / GPT 阅读本仓库时应注意
+
+如果使用 GPT 或其他 AI 协助 Mahou 开发，应首先理解：
+
+## 不要把 config 当成项目主要源码目录
+
+当前项目自定义玩法主要位于：
+
+```text
+kubejs/
+```
+
+`config/` 更多是第三方 Mod 使用的配置区域。
+
+---
+
+## 不要因为 GitHub 缺少某个 config 就认为对应 Mod 不存在
+
+普通第三方 Mod 配置目前默认被 `.gitignore` 排除。
+
+---
+
+## 不要随意重新跟踪整个 config
+
+如果项目开始修改一个第三方 Mod，应只纳入真正需要维护的对应配置。
+
+---
+
+## 不要随意改变 KubeJS 一级目录名称
+
+以下目录具有 KubeJS 框架规定的生命周期含义：
+
+```text
+startup_scripts/
+server_scripts/
+client_scripts/
+data/
+assets/
+config/
+```
+
+项目内部架构应该在这些目录内部逐渐发展，而不是重新设计这些一级目录。
+
+---
+
+## 不要因为文件编号认为它们一定存在严格加载依赖
+
+例如：
+
+```text
+00_Config.js
+01_Island.js
+...
+99_FloatingIslandGenerator.js
+```
+
+文件名前的数字目前主要用于人工阅读和排序。
+
+程序正确性不应依赖：
+
+```text
+00 一定先于 01
+01 一定先于 02
+```
+
+这样的隐含假设。
+
+---
+
+# 24. 当前整体开发关系
+
+可以将整个开发环境理解为：
+
+```text
+                   GitHub
+                      │
+                      │ pull / push
+                      ▼
+          E:\MinecraftModPack\mahou
+              Git Repository
+                      │
+        ┌─────────────┼─────────────┐
+        │             │             │
+      mods          config        kubejs
+        │             │             │
+        │ Junction    │ Junction    │ Junction
+        ▼             ▼             ▼
+      mods          config        kubejs
+        └─────────────┬─────────────┘
+                      │
+                      ▼
+       E:\Minecraft\.minecraft\versions\
+                    Mahou-Dev
+                      │
+                      ▼
+                  Minecraft
+```
+
+同时：
+
+```text
+Mahou-Dev\saves
+Mahou-Dev\logs
+Mahou-Dev\screenshots
+Mahou-Dev\PCL
+```
+
+等仍然只属于运行环境。
+
+---
+
+# 25. 项目内容的判断标准
+
+一个文件是否应该进入 Git，不应该单纯根据：
+
+```text
+它是不是 Minecraft 文件
+```
+
+或者：
+
+```text
+它是不是 config
+```
+
+来判断。
+
+更重要的问题是：
+
+> 这个文件是不是已经成为 Mahou 主动设计和维护的一部分？
+
+例如：
+
+```text
+config/ftbquests/
+```
+
+虽然在 `config/` 中，但属于 Mahou 主动维护，因此进入 Git。
+
+而：
+
+```text
+config/embeddium-options.json
+```
+
+虽然实际存在并被 Minecraft 使用，但目前不是 Mahou 主动维护内容，因此不进入 Git。
+
+未来：
+
+```text
+config/cataclysm-common.toml
+```
+
+如果开始承担 Mahou Boss 数值平衡，则可以转变为项目维护内容，并进入 Git。
+
+---
+
+# 26. 当前开发哲学
+
+开发环境和代码架构采用相同的基本思想：
+
+> 不提前管理尚未成为项目内容的东西。
+
+对于目录结构：
+
+```text
+文件
+↓
+实际形成共同功能
+↓
+建立功能文件夹
+↓
+功能进一步增加
+↓
+再形成更高层结构
+```
+
+对于第三方配置：
+
+```text
+Mod 自动配置
+↓
+默认本地存在
+↓
+Mahou 实际需要修改
+↓
+正式纳入 Git
+```
+
+也就是说：
+
+> 项目结构和版本控制范围都应该随真实复杂度生长，而不是提前预测未来所有需求。
+
+---
+
+# 27. 相关文档
+
+项目代码目录结构：
+
+```text
+docs/architecture/code_structure.md
+```
+
+浮岛系统：
+
+```text
+docs/systems/floating_islands.md
+```
+
+脚本目录组织决策：
+
+```text
+docs/decisions/001_script_folder_strategy.md
+```
+
+第三方 Mod 配置版本控制决策：
+
+```text
+docs/decisions/002_config_tracking_strategy.md
+```
+
+阅读项目时，建议结合这些文档，而不是单独根据当前文件树推断项目架构。
+
+---
+
+# 28. 最终原则总结
+
+当前开发环境可以浓缩为：
+
+```text
+Git Repository
+=
+Mahou 项目源码
++
+Mahou 主动维护的数据
++
+项目文档
+```
+
+```text
+PCL Instance
+=
+Minecraft 实际运行环境
++
+本地存档
++
+日志
++
+运行状态
+```
+
+```text
+Junction
+=
+让 Minecraft 直接读取 Git 工作目录中的开发文件
+```
+
+```text
+.gitignore
+=
+决定哪些运行环境内容真正属于项目版本控制范围
+```
+
+因此：
+
+> 文件实际存在，不等于应该进入 Git。
+
+> 文件被 Minecraft 使用，也不等于应该进入 Git。
+
+> 只有当某个内容已经成为 Mahou 主动开发、设计或维护的一部分时，才应正式纳入版本控制。

@@ -54,3 +54,9 @@ Mahou 当前不默认版本控制这些 Mod 自动生成的配置文件，因为
 这样，进入 Git 的第三方 Mod 配置本身就表示该配置已经成为 Mahou 主动维护的一部分。
 
 注意：此规则只适用于项目根目录 `config/`，不适用于 `kubejs/config/`。
+
+## 开发环境
+
+本地 Git 仓库、PCL 运行实例、Windows Junction 以及 Git 跟踪范围的详细说明见：
+
+`docs/architecture/development_environment.md`
