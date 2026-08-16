@@ -1,1 +1,12 @@
 ﻿*.zip
+
+# Local Minecraft runtime files
+/mods/
+/logs/
+/saves/
+/crash-reports/
+/screenshots/
+/resourcepacks/
+/shaderpacks/
+/local/
+options.txt
