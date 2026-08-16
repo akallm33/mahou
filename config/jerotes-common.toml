@@ -1,0 +1,92 @@
+
+["Tamed Mob"]
+	#Tame Mob Hurt By Owner Has Reduce
+	"驯服生物对主人对自身造成的伤害拥有减伤" = true
+	#Tame Mob Attack Creeper And Ghast
+	"模组添加的驯服生物攻击苦力怕[Creeper]和恶魂[Ghast]" = false
+	#Affects Non This Mod Entities
+	"影响非本模组实体" = false
+	#Have Saving Throw
+	"拥有豁免判定" = true
+	#Have Saving Throw Only Player And Legendary
+	"只有玩家和传奇存在生物拥有豁免判定（优先级低）" = true
+	#No Roll Dice
+	"无随机骰子" = false
+	#Some Bullet Spell Reach Multiplier
+	#Range: 0.0 ~ 1.7976931348623157E308
+	"部分射弹法术距离倍数" = 1.5
+
+[Other]
+	#Corrosive Stop Durability Value
+	#Range: > 0
+	"腐蚀中止耐久值" = 8
+	#Screen Shake
+	"屏幕抖动" = true
+	#Restore the Vanilla Tool Display Info
+	"还原原版工具显示简介" = false
+	#Shield Can Break Base In Game Rule
+	"基础游戏规则盾牌物品损坏" = true
+	#Armor Can Break Base In Game Rule
+	"基础游戏规则盔甲物品损坏" = false
+	#Melee Can Break Base In Game Rule
+	"基础游戏规则近战武器损坏" = false
+	#Range Can Break Base In Game Rule
+	"基础游戏规则远程武器损坏" = false
+	#Magic Can Break Base In Game Rule
+	"基础游戏规则魔法武器损坏" = true
+	#Same Faction Avoid Damage
+	"同阵营免伤" = true
+	#Vanilla Tool Show Special Tooltip
+	"原版工具特殊提示（无用）" = true
+	#Mob Say Question Mark
+	"生物说问号" = true
+	#Mob Destroy Block
+	"生物破坏方块" = true
+	#Tamed Mob Destroy Block
+	"驯服生物破坏方块" = true
+	#Mob Has Shock Aback
+	"生物会因为震摄逃离" = false
+	#Mob Use Crossbow Shrink Arrow
+	"生物使用弩消耗箭矢" = false
+	#Mob Use Bow Shrink Arrow
+	"生物使用弓消耗箭矢" = false
+	#Mob Use Throw Shrink Item
+	"生物使用投掷消耗物品" = false
+	#Mob Use Other Shrink Item
+	"生物使用其他消耗物品" = false
+	#Inventory Mob About Itemstack Inventory Tick
+	"具有物品栏生物关于背包计时的物品" = true
+	#Mob Manually Control Combat Camera Change
+	"生物手动控制状态时摄像机变动 " = true
+	#Zombie Can Use Spear And Pike Without Tag
+	"僵尸可以使用矛和长枪而不需要标签 " = true
+	#Random Skin Mob Has Under Texture
+	"随机纹理生物拥有底层纹理" = false
+	#Human Custom Name Wide
+	"人类自定义名称宽体" = ["Jerotes_"]
+	#Human Custom Name Slim
+	"人类自定义名称细体" = ["Sentnes", "Maid"]
+
+["Special Combat"]
+	#Has Percentage Damage
+	"拥有百分比伤害" = []
+	#Has Damage Cap
+	"拥有限伤" = []
+	#Has Damage Cooldown Tick
+	"拥有无敌帧" = []
+	#Base Break Hurt Cooldown Multiple
+	#Range: 0.0 ~ 1.7976931348623157E308
+	"基础无敌帧破除倍数" = 5.0
+	#Base Attack Percentage : 5.0
+	#Range: 0.0 ~ 1.7976931348623157E308
+	"基础百分比" = 5.0
+	#Base Magic Attack Percentage : 5.0
+	#Range: 0.0 ~ 1.7976931348623157E308
+	"基础魔法百分比" = 5.0
+	#Base Damage Cap Percentage
+	#Range: 0.0 ~ 1.7976931348623157E308
+	"基础限伤百分比" = 5.0
+	#Base Damage Cooldown Tick
+	#Range: 0.0 ~ 1.7976931348623157E308
+	"基础无敌帧帧数" = 20.0
+

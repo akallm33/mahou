@@ -1,0 +1,31 @@
+#If set to 'False' disable camera shake
+"Enable Camera Shake" = true
+#If set to 'False' disable custom bosse health bar
+"Enable Custom Boss Health Bars" = true
+#If set to 'False' disable play boss music
+"Enable Play Bosses Musics" = true
+#If set to 'False' disable falling block rendering
+"Enable Falling Block Render" = true
+
+["Popup Notification"]
+	#If set to 'False' disable popup notification
+	Enabled = true
+	#HUD display mode: FADE_IN_OUT (fade in/out), IMMEDIATE (show immediately)
+	#Allowed Values: FADE_IN_OUT, IMMEDIATE
+	"Display Mode" = "FADE_IN_OUT"
+	#HUD display duration in ticks
+	#Range: 20 ~ 1200
+	"Display Duration" = 120
+	#HUD background opacity
+	#Range: 0.0 ~ 1.0
+	"Background Opacity" = 0.25
+	#Maximum width for text lines in pixels
+	#Range: 100 ~ 400
+	"Text Max Width" = 300
+	#Spacing between text lines in pixels
+	#Range: 0 ~ 10
+	"Line Spacing" = 2
+	#Vertical position of HUD from top of screen in pixels
+	#Range: 0 ~ 100
+	"Hud Position Y" = 30
+

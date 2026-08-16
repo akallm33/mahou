@@ -8,6 +8,7 @@
 	quest_links: [ ]
 	quests: [
 		{
+			entity_vis_size: 1.0f
 			id: "2C140BECAFBF82FC"
 			tasks: [{
 				id: "72F5157EFA19278A"
@@ -18,6 +19,7 @@
 			y: -7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "4F1FFD82EC600552"
 			tasks: [{
 				id: "2E58359DAA410F90"
@@ -28,6 +30,7 @@
 			y: -6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "532B2630D8C1F4C2"
 			tasks: [{
 				id: "48E23090195DC0A8"
@@ -38,6 +41,7 @@
 			y: -4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "5D55472C51EC11FE"
 			tasks: [{
 				id: "02274B421DBA9F8E"
@@ -48,6 +52,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "5C5F23CFE08951B0"
 			tasks: [{
 				id: "0908FBB585F4C00B"
@@ -59,6 +64,7 @@
 			y: -7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "6D6A197205A20DE0"
 			tasks: [{
 				id: "4A83F7359E29A123"
@@ -70,6 +76,7 @@
 			y: -6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "693F4DEE781CA7BD"
 			tasks: [{
 				id: "4146670F109CFA28"
@@ -81,6 +88,7 @@
 			y: -6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "212710EFA03B6097"
 			tasks: [{
 				id: "4024963FC4A7A168"
@@ -92,6 +100,7 @@
 			y: -4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "7A06AA2FF2084A28"
 			tasks: [{
 				id: "45D812E5313431E3"
@@ -103,6 +112,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "0AA236DBF9AF89EA"
 			tasks: [{
 				id: "7FF6D9034B150126"
@@ -114,6 +124,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "430BF9B4C0805E9D"
 			tasks: [{
 				id: "1712D669B0FDEA59"
@@ -125,6 +136,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "0F53CFCA2AB44A95"
 			tasks: [{
 				id: "36F9FFE91657346D"
@@ -136,6 +148,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "7E775F6F73374336"
 			tasks: [{
 				id: "53A7569E2E338D1A"
@@ -147,6 +160,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "5467AB3D257A70FC"
 			tasks: [{
 				id: "343EC27E68DD3EA3"
@@ -158,6 +172,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "471B36889D9FF802"
 			tasks: [{
 				id: "049F8E8706D76D78"
@@ -169,6 +184,7 @@
 			y: -3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "7680805B604EC536"
 			tasks: [{
 				id: "2AA6B259E010A36C"
@@ -180,6 +196,7 @@
 			y: -1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "59713667442A5046"
 			tasks: [{
 				id: "3A380BE1A44DDEC3"
@@ -191,6 +208,7 @@
 			y: -1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "4D7BDDFB8634BB47"
 			tasks: [{
 				id: "462115966DA8235E"
@@ -202,6 +220,7 @@
 			y: -1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "27A80F90D7D58FF3"
 			tasks: [{
 				id: "4CD2C153A6EE42BD"
@@ -213,6 +232,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "55AF88B4811F8D29"
 			tasks: [{
 				id: "0DF17E8EB9164E82"
@@ -224,6 +244,7 @@
 			y: -7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "364E5312B3E4DDC7"
 			tasks: [{
 				id: "1ACDB0EFA6234EDD"
@@ -235,6 +256,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "6E0B9223D64D5679"
 			tasks: [{
 				id: "050E41B73E12D218"
@@ -246,6 +268,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "437BE1555E85F2E0"
 			tasks: [{
 				id: "223C73E08196EE0D"
@@ -257,6 +280,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "3DB94FD93E86B8B7"
 			tasks: [{
 				id: "3B2A0DB657BCE603"
@@ -268,6 +292,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "797F057226F765C8"
 			tasks: [{
 				id: "3769F32562489E10"
@@ -279,6 +304,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "13F6637F9D15FA00"
 			tasks: [{
 				id: "5C64125F7EEBC4FE"
@@ -290,6 +316,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "66EDEC3E66049025"
 			tasks: [{
 				id: "7F91068B8783F8DE"
@@ -301,6 +328,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "664F54650DFD4E71"
 			tasks: [{
 				id: "3DF10B43BF772080"
@@ -312,6 +340,7 @@
 			y: 3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "6CD2EEB3678BD1D8"
 			tasks: [{
 				id: "0FF0346E1D3E3553"
@@ -323,6 +352,7 @@
 			y: 3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "73C9896667F6E8F3"
 			tasks: [{
 				id: "59A3AE5139681BD6"
@@ -334,6 +364,7 @@
 			y: 3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "670E328640875CE0"
 			tasks: [{
 				id: "20F22EDEF62D9D6E"
@@ -345,6 +376,7 @@
 			y: 1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "7C726EEF6A4C505E"
 			tasks: [{
 				id: "5F8623F9D44C20E2"
@@ -356,6 +388,7 @@
 			y: 1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "493E1E1D2A1C5EA6"
 			tasks: [{
 				id: "244BDA37E0FECBB4"
@@ -367,6 +400,7 @@
 			y: 4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "059428BDC16BC88D"
 			tasks: [{
 				id: "6B325204E809128C"
@@ -378,6 +412,7 @@
 			y: 4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "605244D714482C0F"
 			tasks: [{
 				id: "0C7E6831A97C08CE"
@@ -389,6 +424,7 @@
 			y: 4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "70B3648FA56BC923"
 			tasks: [{
 				id: "6ADB4AB554D4E0C4"
@@ -400,6 +436,7 @@
 			y: 4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "53DD317EEF079152"
 			tasks: [{
 				id: "13E7BB71CB530251"
@@ -411,6 +448,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "268C40FDCF60A75A"
 			tasks: [{
 				id: "2D70FD3A134EFD4F"
@@ -422,6 +460,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "4F76D3F1D280CD56"
 			tasks: [{
 				id: "05A888D0BCFFF676"
@@ -433,6 +472,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "3B1DD04BD717355D"
 			tasks: [{
 				id: "2185EE1803E80716"
@@ -444,6 +484,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "5CAD0383E3A6C97D"
 			tasks: [{
 				id: "39900717242FA89D"
@@ -455,6 +496,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "634597FD3BB5610C"
 			tasks: [{
 				id: "5289AD2100FBCEFE"
@@ -466,6 +508,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "538EFFC9DBFEA395"
 			tasks: [{
 				id: "068130E8B6E7F2A0"
@@ -476,6 +519,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "622D43E53391CB3B"
 			tasks: [{
 				id: "74970AC24EBFF966"
@@ -486,6 +530,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "5B2A899266EE7628"
 			tasks: [{
 				id: "331836F38D03113B"
@@ -496,6 +541,7 @@
 			y: -1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "64DA4382710BE788"
 			tasks: [{
 				id: "43EEB68CEF169B88"
@@ -506,6 +552,7 @@
 			y: 0.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "48A614BA7DEB1509"
 			tasks: [{
 				id: "2DAEE751254E0ECE"
@@ -516,6 +563,7 @@
 			y: 1.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "4A4771DE13DCF6A5"
 			tasks: [{
 				id: "37A7510542A6DFD7"
@@ -526,6 +574,7 @@
 			y: 3.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "2E1BF7458255B072"
 			tasks: [{
 				id: "4ABF84128B8BE1D6"
@@ -536,6 +585,7 @@
 			y: 4.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "362CD98F033A7FC4"
 			tasks: [{
 				id: "7A9B69A97AFAC78D"
@@ -546,6 +596,7 @@
 			y: 6.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "017AD50443C17AE9"
 			tasks: [{
 				id: "07251CE9B7982B26"
@@ -557,6 +608,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "15AC9D2900F08DCD"
 			tasks: [{
 				id: "2A5E3A7DCDE2E577"
@@ -568,6 +620,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "2E4AEAD41F6A4ACA"
 			tasks: [{
 				id: "1D00E1F269DB9B7C"
@@ -579,6 +632,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "617669AD1ACACDBB"
 			tasks: [{
 				id: "0C1320CAB360841D"
@@ -590,6 +644,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "6AD31D2692704642"
 			tasks: [{
 				id: "40F0843961B4D22D"
@@ -601,6 +656,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "586C9DF6E677BB2F"
 			tasks: [{
 				id: "60B69759C76A150A"
@@ -612,6 +668,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "1C2E8299ED26867F"
 			tasks: [{
 				id: "043BBBC897A0AB3E"
@@ -623,6 +680,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "3C9BEAFCEDBA07BF"
 			tasks: [{
 				id: "662998915B79FAEC"
@@ -634,6 +692,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "33C6A91A0D8A9A93"
 			tasks: [{
 				id: "782F748A3306B746"
@@ -645,6 +704,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "496C9D58117F40E9"
 			tasks: [{
 				id: "7B7EAC1C9C99474E"
@@ -656,6 +716,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "363B5137D5D7E195"
 			tasks: [{
 				id: "01B82ABA04FF1383"
@@ -667,6 +728,7 @@
 			y: 7.5d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "465B817165AB7C69"
 			tasks: [{
 				id: "245BF880E471AD03"
@@ -678,6 +740,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "2969CC2BFE75428B"
 			tasks: [{
 				id: "69AA919263217A24"
@@ -689,6 +752,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "53187249236F37FC"
 			tasks: [{
 				id: "52ACA948068C0BD1"
@@ -700,6 +764,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "606486D385EF64A6"
 			tasks: [{
 				id: "71EA2BBA61E60781"
@@ -711,6 +776,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "5FD118372EDCEFD9"
 			tasks: [{
 				id: "640E11775B0A2909"
@@ -722,6 +788,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "245739BD87D0ED24"
 			tasks: [{
 				id: "1FFEC6A79536A481"
@@ -733,6 +800,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "48D2296DC3EA757A"
 			tasks: [{
 				id: "0DB678359D1ED70C"
@@ -744,6 +812,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "37008E316FCDE94A"
 			tasks: [{
 				id: "2EBBE546628EEAE3"
@@ -755,6 +824,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "60F375AED67FC8BB"
 			tasks: [{
 				id: "306EEF85C28EEFE8"
@@ -766,6 +836,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "483F064BCBB3BC12"
 			tasks: [{
 				id: "633EC3AEC0D7C6E2"
@@ -777,6 +848,7 @@
 			y: 9.0d
 		}
 		{
+			entity_vis_size: 1.0f
 			id: "2585282AB384421D"
 			tasks: [{
 				id: "6CB753C3F0921ED3"

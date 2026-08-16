@@ -1,0 +1,54 @@
+{
+	default_hide_dependency_lines: false
+	default_quest_shape: ""
+	filename: "546659283C21AA2F"
+	group: "1E3C6E68A7AB2C6B"
+	id: "546659283C21AA2F"
+	order_index: 1
+	quest_links: [ ]
+	quests: [
+		{
+			can_repeat: true
+			description: ["个人维度不会刷怪，永久白天晴天，很适合用来存放节点"]
+			disable_toast: true
+			entity_vis_size: 1.0f
+			id: "5248C61541020510"
+			rewards: [{
+				auto: "disabled"
+				command: "/execute in mahou:personal_dimension run tp @s 0 1 0"
+				elevate_perms: true
+				exclude_from_claim_all: true
+				id: "5F7AA83249BA7531"
+				team_reward: false
+				title: "传送"
+				type: "command"
+			}]
+			tasks: [{
+				id: "21CCE29B73685B8B"
+				title: "进入个人维度"
+				type: "checkmark"
+			}]
+			x: -4.0d
+			y: -2.5d
+		}
+		{
+			can_repeat: true
+			entity_vis_size: 1.0f
+			id: "456A09A8DD4DC36E"
+			rewards: [{
+				command: "/execute in mahou:modfusion_dimension run tp @p 0 100 0"
+				elevate_perms: true
+				id: "37ED391F9A092C4E"
+				type: "command"
+			}]
+			tasks: [{
+				id: "2A9DC8E7F4E7A086"
+				title: "测试用！！！"
+				type: "checkmark"
+			}]
+			x: -2.5d
+			y: -2.5d
+		}
+	]
+	title: "小助手"
+}

@@ -1,0 +1,19 @@
+{
+  "type": "mahou:personal_dimension_type",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "minecraft:the_void",
+      "lakes": false,
+      "features": false,
+      "layers": [
+        { "height": 3, "block": "minecraft:bedrock" },
+        { "height": 61, "block": "minecraft:smooth_stone" }
+      ],
+      "structure_overrides": []
+    }
+  },
+  "spawners": {
+    
+  }
+}
