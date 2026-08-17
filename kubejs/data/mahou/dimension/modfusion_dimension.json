@@ -1,13 +1,253 @@
 {
   "type": "mahou:modfusion_dimension_type",
+
   "generator": {
-    "type": "minecraft:flat",
-    "settings": {
-      "biome": "minecraft:the_void",
-      "lakes": false,
-      "features": false,
-      "layers": [],
-      "structure_overrides": []
-    }
+    "type": "minecraft:noise",
+
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+
+      "biomes": [
+        {
+          "parameters": {
+            "temperature": -0.6,
+            "humidity": -0.4,
+            "continentalness": -0.55,
+            "erosion": 0.0,
+            "weirdness": 0.0,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modfusion"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.6,
+            "humidity": -0.4,
+            "continentalness": -0.55,
+            "erosion": 0.0,
+            "weirdness": 0.0,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:vanilla/plains"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.1,
+            "humidity": 0.7,
+            "continentalness": -0.55,
+            "erosion": 0.0,
+            "weirdness": 0.0,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:vanilla/forest"
+        },
+
+
+        {
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": 0.2,
+            "continentalness": 0.55,
+            "erosion": -0.65,
+            "weirdness": 0.0,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/forest"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.0,
+            "humidity": 0.65,
+            "continentalness": 0.55,
+            "erosion": -0.65,
+            "weirdness": -0.45,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/dense_forest"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.15,
+            "humidity": 0.65,
+            "continentalness": 0.55,
+            "erosion": -0.65,
+            "weirdness": 0.45,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/firefly_forest"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.5,
+            "humidity": -0.35,
+            "continentalness": 0.55,
+            "erosion": -0.65,
+            "weirdness": -0.45,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/clearing"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.6,
+            "humidity": -0.55,
+            "continentalness": 0.55,
+            "erosion": -0.65,
+            "weirdness": 0.45,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/oak_savannah"
+        },
+
+
+        {
+          "parameters": {
+            "temperature": 0.35,
+            "humidity": 0.55,
+            "continentalness": 0.55,
+            "erosion": -0.20,
+            "weirdness": -0.50,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/mushroom_forest"
+        },
+
+        {
+          "parameters": {
+            "temperature": 0.40,
+            "humidity": 0.85,
+            "continentalness": 0.55,
+            "erosion": -0.20,
+            "weirdness": 0.50,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/dense_mushroom_forest"
+        },
+
+        {
+          "parameters": {
+            "temperature": -0.30,
+            "humidity": 0.25,
+            "continentalness": 0.55,
+            "erosion": -0.20,
+            "weirdness": 0.50,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/enchanted_forest"
+        },
+
+        {
+          "parameters": {
+            "temperature": -0.30,
+            "humidity": 0.80,
+            "continentalness": 0.55,
+            "erosion": -0.20,
+            "weirdness": -0.50,
+            "depth": 0.0,
+            "offset": 0.0
+          },
+          "biome": "mahou:modded/twilightforest/spooky_forest"
+        },
+
+        {
+  "parameters": {
+    "temperature": 0.35,
+    "humidity": 0.85,
+    "continentalness": 0.55,
+    "erosion": 0.25,
+    "weirdness": -0.55,
+    "depth": 0.0,
+    "offset": 0.0
+  },
+  "biome": "mahou:modded/twilightforest/swamp"
+},
+
+{
+  "parameters": {
+    "temperature": 0.85,
+    "humidity": 0.15,
+    "continentalness": 0.55,
+    "erosion": 0.25,
+    "weirdness": 0.55,
+    "depth": 0.0,
+    "offset": 0.0
+  },
+  "biome": "mahou:modded/twilightforest/fire_swamp"
+},
+
+{
+  "parameters": {
+    "temperature": -0.25,
+    "humidity": 0.75,
+    "continentalness": 0.55,
+    "erosion": 0.25,
+    "weirdness": 0.0,
+    "depth": 0.0,
+    "offset": 0.0
+  },
+  "biome": "mahou:modded/twilightforest/dark_forest"
+},
+
+{
+  "parameters": {
+    "temperature": -0.65,
+    "humidity": 0.65,
+    "continentalness": 0.55,
+    "erosion": 0.70,
+    "weirdness": -0.55,
+    "depth": 0.0,
+    "offset": 0.0
+  },
+  "biome": "mahou:modded/twilightforest/snowy_forest"
+},
+
+{
+  "parameters": {
+    "temperature": -0.85,
+    "humidity": -0.15,
+    "continentalness": 0.55,
+    "erosion": 0.70,
+    "weirdness": 0.55,
+    "depth": 0.0,
+    "offset": 0.0
+  },
+  "biome": "mahou:modded/twilightforest/glacier"
+},
+
+{
+  "parameters": {
+    "temperature": -0.15,
+    "humidity": 0.30,
+    "continentalness": 0.55,
+    "erosion": 0.70,
+    "weirdness": 0.0,
+    "depth": 0.0,
+    "offset": 0.0
+  },
+  "biome": "mahou:modded/twilightforest/highlands"
+}
+
+
+      ]
+    },
+
+    "settings": "mahou:modfusion_floating_islands"
   }
 }

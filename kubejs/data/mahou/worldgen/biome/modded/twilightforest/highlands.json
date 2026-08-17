@@ -1,0 +1,123 @@
+{
+  "has_precipitation": true,
+  "temperature": 0.4,
+  "downfall": 0.7,
+
+  "effects": {
+    "fog_color": 12648408,
+    "water_color": 4159204,
+    "water_fog_color": 329011,
+    "sky_color": 2105930,
+
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    },
+
+    "music": {
+      "sound": "twilightforest:music.twilightforest.twilight_forest",
+      "min_delay": 1200,
+      "max_delay": 12000,
+      "replace_current_music": true
+    }
+  },
+
+  "spawners": {
+    "ambient": [],
+    "axolotls": [],
+
+    "creature": [
+      {
+        "type": "twilightforest:bighorn_sheep",
+        "weight": 12,
+        "minCount": 4,
+        "maxCount": 4
+      },
+      {
+        "type": "twilightforest:boar",
+        "weight": 10,
+        "minCount": 4,
+        "maxCount": 4
+      },
+      {
+        "type": "minecraft:chicken",
+        "weight": 10,
+        "minCount": 4,
+        "maxCount": 4
+      },
+      {
+        "type": "twilightforest:deer",
+        "weight": 15,
+        "minCount": 4,
+        "maxCount": 5
+      },
+      {
+        "type": "minecraft:wolf",
+        "weight": 5,
+        "minCount": 4,
+        "maxCount": 4
+      },
+      {
+        "type": "twilightforest:tiny_bird",
+        "weight": 15,
+        "minCount": 4,
+        "maxCount": 8
+      },
+      {
+        "type": "twilightforest:squirrel",
+        "weight": 10,
+        "minCount": 2,
+        "maxCount": 4
+      },
+      {
+        "type": "twilightforest:dwarf_rabbit",
+        "weight": 10,
+        "minCount": 4,
+        "maxCount": 5
+      },
+      {
+        "type": "twilightforest:raven",
+        "weight": 10,
+        "minCount": 1,
+        "maxCount": 2
+      }
+    ],
+
+    "misc": [],
+    "monster": [],
+    "underground_water_creature": [],
+    "water_ambient": [],
+    "water_creature": []
+  },
+
+  "spawn_costs": {},
+
+  "carvers": {
+    "air": [],
+    "liquid": []
+  },
+
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "minecraft:patch_grass_taiga",
+
+      "twilightforest:tree/selector/highlands_trees",
+
+      "minecraft:forest_rock",
+
+      "twilightforest:spruce_fallen_log"
+    ],
+    []
+  ]
+}

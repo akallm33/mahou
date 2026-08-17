@@ -1,0 +1,71 @@
+{
+  "has_precipitation": true,
+  "temperature": 0.08,
+  "downfall": 0.1,
+
+  "creature_spawn_probability": 0.2,
+
+  "effects": {
+    "fog_color": 3547016,
+    "water_color": 4159204,
+    "water_fog_color": 329011,
+    "sky_color": 1248552,
+
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    },
+
+    "music": {
+      "sound": "twilightforest:music.twilightforest.twilight_forest",
+      "min_delay": 1200,
+      "max_delay": 12000,
+      "replace_current_music": true
+    }
+  },
+
+  "spawners": {
+    "ambient": [],
+    "axolotls": [],
+
+    "creature": [
+      {
+        "type": "twilightforest:penguin",
+        "weight": 10,
+        "minCount": 2,
+        "maxCount": 4
+      }
+    ],
+
+    "misc": [],
+    "monster": [],
+    "underground_water_creature": [],
+    "water_ambient": [],
+    "water_creature": []
+  },
+
+  "spawn_costs": {},
+
+  "carvers": {
+    "air": [],
+    "liquid": []
+  },
+
+  "features": [
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [
+      "minecraft:freeze_top_layer"
+    ]
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "has_precipitation": true,
+  "temperature": 0.5,
+  "downfall": 1.0,
+
+  "creature_spawn_probability": 0.2,
+
+  "effects": {
+    "fog_color": 12648408,
+    "water_color": 12355671,
+    "water_fog_color": 329011,
+    "sky_color": 2105930,
+
+    "foliage_color": 16745729,
+    "grass_color": 12865827,
+    "grass_color_modifier": "twilightforest:spooky_forest",
+
+    "mood_sound": {
+      "sound": "minecraft:ambient.cave",
+      "tick_delay": 6000,
+      "block_search_extent": 8,
+      "offset": 2.0
+    },
+
+    "music": {
+      "sound": "twilightforest:music.twilightforest.twilight_forest",
+      "min_delay": 1200,
+      "max_delay": 12000,
+      "replace_current_music": true
+    }
+  },
+
+  "spawners": {
+    "ambient": [
+      {
+        "type": "minecraft:bat",
+        "weight": 20,
+        "minCount": 2,
+        "maxCount": 4
+      }
+    ],
+
+    "monster": [
+      {
+        "type": "minecraft:spider",
+        "weight": 50,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "minecraft:skeleton",
+        "weight": 20,
+        "minCount": 1,
+        "maxCount": 2
+      },
+      {
+        "type": "twilightforest:skeleton_druid",
+        "weight": 5,
+        "minCount": 1,
+        "maxCount": 1
+      }
+    ],
+
+    "creature": []
+  },
+
+  "spawn_costs": {
+    "minecraft:skeleton": {
+      "charge": 0.85,
+      "energy_budget": 0.25
+    },
+
+    "minecraft:spider": {
+      "charge": 0.75,
+      "energy_budget": 0.25
+    },
+
+    "twilightforest:skeleton_druid": {
+      "charge": 0.95,
+      "energy_budget": 0.25
+    }
+  },
+
+  "carvers": {
+    "air": [],
+    "liquid": []
+  },
+
+"features": [
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [],
+  [
+    "minecraft:patch_grass_forest",
+    "minecraft:patch_tall_grass",
+    "minecraft:patch_grass_badlands",
+    "minecraft:patch_grass_savanna",
+
+    "twilightforest:mayapple",
+
+    "twilightforest:tree/twilight_oak_tree",
+    "twilightforest:tree/large_twilight_oak_tree",
+    "twilightforest:tree/dead_canopy_tree",
+
+    "twilightforest:pumpkin_lamppost",
+
+    "twilightforest:tf_oak_fallen_log",
+    "twilightforest:canopy_fallen_log",
+
+    "twilightforest:webs",
+    "twilightforest:fallen_leaves",
+
+    "minecraft:patch_sugar_cane",
+    "minecraft:patch_pumpkin",
+    "minecraft:patch_dead_bush"
+  ],
+  []
+]
+}

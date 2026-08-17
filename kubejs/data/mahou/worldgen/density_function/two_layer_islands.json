@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:max",
+
+  "argument1": "mahou:middle_layer_islands",
+
+  "argument2": "mahou:high_layer_islands"
+}

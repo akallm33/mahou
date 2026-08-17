@@ -36,7 +36,7 @@
 			entity_vis_size: 1.0f
 			id: "456A09A8DD4DC36E"
 			rewards: [{
-				command: "/execute in mahou:modfusion_dimension run tp @p 0 161 0"
+				command: "/execute in mahou:modfusion_dimension run tp @p 0 100 0"
 				elevate_perms: true
 				id: "37ED391F9A092C4E"
 				type: "command"
@@ -47,6 +47,23 @@
 				type: "checkmark"
 			}]
 			x: -2.5d
+			y: -2.5d
+		}
+		{
+			can_repeat: true
+			entity_vis_size: 1.0f
+			id: "6A42E3109DD29118"
+			rewards: [{
+				command: "/execute in minecraft:overworld run tp @p 0 120 0"
+				id: "74A12E63DCE4D6C5"
+				type: "command"
+			}]
+			tasks: [{
+				id: "690769EC84A7E119"
+				title: "回到主世界"
+				type: "checkmark"
+			}]
+			x: -5.5d
 			y: -2.5d
 		}
 	]
