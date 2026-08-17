@@ -162,6 +162,49 @@ global.MahouNetworkRoutingRules = {
         return result;
     },
 
+    // ============================================================
+    // Weight Normalization
+    // ============================================================
+    //
+    // Routing Rule 直接被调用时也必须防止：
+    //
+    // NaN
+    // Infinity
+    // -Infinity
+    // string
+    //
+    // 污染整个点数流。
+    //
+    // undefined / null：
+    // 视为没有填写 weight，默认 1。
+    //
+    // 非法显式值：
+    // 按 0 处理。
+    //
+    // 负数：
+    // clamp 到 0。
+
+    normalizeWeight: function (weight) {
+
+        if (
+            weight === undefined ||
+            weight === null
+        ) {
+            return 1;
+        }
+
+        if (
+            typeof weight !== "number" ||
+            !isFinite(weight)
+        ) {
+            return 0;
+        }
+
+        return Math.max(
+            0,
+            weight
+        );
+    },
 
     // ============================================================
     // EQUAL
@@ -276,19 +319,8 @@ global.MahouNetworkRoutingRules = {
             i++
         ) {
             var weight =
-                successors[i].weight;
-
-            if (
-                weight === undefined ||
-                weight === null
-            ) {
-                weight = 1;
-            }
-
-            weight =
-                Math.max(
-                    0,
-                    weight
+                this.normalizeWeight(
+                    successors[i].weight
                 );
 
             weights.push(
@@ -300,8 +332,10 @@ global.MahouNetworkRoutingRules = {
         }
 
 
-        // 所有权重为0时，
-        // 回退到默认均分。
+        // 所有权重无效或为 0：
+        //
+        // 回退到安全的 equal，
+        // 避免网络流量意外全部消失。
 
         if (totalWeight <= 0) {
             return this.equal(

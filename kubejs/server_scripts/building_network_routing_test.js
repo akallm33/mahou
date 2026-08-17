@@ -1628,6 +1628,357 @@ LevelEvents.loaded(function (event) {
         0
     );
 
+    // ============================================================
+    // TEST 18
+    // Weight Robustness
+    // ============================================================
+
+    console.log(
+        "[Mahou Routing Test] --- Weight Robustness ---"
+    );
+
+
+    assertClose(
+        "undefined weight defaults to one",
+        routingRules.normalizeWeight(
+            undefined
+        ),
+        1
+    );
+
+    assertClose(
+        "null weight defaults to one",
+        routingRules.normalizeWeight(
+            null
+        ),
+        1
+    );
+
+    assertClose(
+        "negative weight clamps to zero",
+        routingRules.normalizeWeight(
+            -5
+        ),
+        0
+    );
+
+    assertClose(
+        "NaN weight becomes zero",
+        routingRules.normalizeWeight(
+            0 / 0
+        ),
+        0
+    );
+
+    assertClose(
+        "Infinity weight becomes zero",
+        routingRules.normalizeWeight(
+            1 / 0
+        ),
+        0
+    );
+
+    assertClose(
+        "string weight becomes zero",
+        routingRules.normalizeWeight(
+            "3"
+        ),
+        0
+    );
+
+
+    // ============================================================
+    // TEST 19
+    // Invalid Weight Cannot Pollute Weighted Routing
+    // ============================================================
+
+    console.log(
+        "[Mahou Routing Test] --- Invalid Weighted Routing ---"
+    );
+
+
+    var invalidWeighted =
+        routingRules.apply(
+            "weighted",
+
+            directInput,
+
+            [
+                {
+                    to: "A",
+                    weight: 0 / 0
+                },
+
+                {
+                    to: "B",
+                    weight: 1
+                }
+            ],
+
+            {},
+
+            {}
+        );
+
+
+    assertClose(
+        "NaN weighted route A gets zero",
+        findRoute(
+            invalidWeighted,
+            "A"
+        ).points.attributes.fire,
+        0
+    );
+
+    assertClose(
+        "NaN weighted route B gets full flow",
+        findRoute(
+            invalidWeighted,
+            "B"
+        ).points.attributes.fire,
+        8
+    );
+
+
+    // ============================================================
+    // TEST 20
+    // All Invalid Weights Fall Back to Equal
+    // ============================================================
+
+    console.log(
+        "[Mahou Routing Test] --- Invalid Weight Fallback ---"
+    );
+
+
+    var allInvalidWeighted =
+        routingRules.apply(
+            "weighted",
+
+            directInput,
+
+            [
+                {
+                    to: "A",
+                    weight: 0 / 0
+                },
+
+                {
+                    to: "B",
+                    weight: 1 / 0
+                }
+            ],
+
+            {},
+
+            {}
+        );
+
+
+    assertClose(
+        "all invalid fallback A fire",
+        findRoute(
+            allInvalidWeighted,
+            "A"
+        ).points.attributes.fire,
+        4
+    );
+
+    assertClose(
+        "all invalid fallback B fire",
+        findRoute(
+            allInvalidWeighted,
+            "B"
+        ).points.attributes.fire,
+        4
+    );
+
+
+    // ============================================================
+    // TEST 21
+    // Calculator Rejects Invalid Edge Weights
+    // ============================================================
+
+    console.log(
+        "[Mahou Routing Test] --- Invalid Edge Weight Rejection ---"
+    );
+
+
+    var invalidNaNEdge =
+        calculator.calculateNetwork(
+
+            [
+                {
+                    id: "IW_NAN_A",
+                    buildingType:
+                        "prototype_relay"
+                },
+
+                {
+                    id: "IW_NAN_B",
+                    buildingType:
+                        "prototype_relay"
+                }
+            ],
+
+            [
+                {
+                    from: "IW_NAN_A",
+                    to: "IW_NAN_B",
+                    weight: 0 / 0
+                }
+            ]
+        );
+
+
+    assertTrue(
+        "calculator rejects NaN edge weight",
+        invalidNaNEdge === null
+    );
+
+
+    var invalidInfinityEdge =
+        calculator.calculateNetwork(
+
+            [
+                {
+                    id: "IW_INF_A",
+                    buildingType:
+                        "prototype_relay"
+                },
+
+                {
+                    id: "IW_INF_B",
+                    buildingType:
+                        "prototype_relay"
+                }
+            ],
+
+            [
+                {
+                    from: "IW_INF_A",
+                    to: "IW_INF_B",
+                    weight: 1 / 0
+                }
+            ]
+        );
+
+
+    assertTrue(
+        "calculator rejects Infinity edge weight",
+        invalidInfinityEdge === null
+    );
+
+
+    var invalidStringEdge =
+        calculator.calculateNetwork(
+
+            [
+                {
+                    id: "IW_STR_A",
+                    buildingType:
+                        "prototype_relay"
+                },
+
+                {
+                    id: "IW_STR_B",
+                    buildingType:
+                        "prototype_relay"
+                }
+            ],
+
+            [
+                {
+                    from: "IW_STR_A",
+                    to: "IW_STR_B",
+                    weight: "3"
+                }
+            ]
+        );
+
+
+    assertTrue(
+        "calculator rejects string edge weight",
+        invalidStringEdge === null
+    );
+
+
+    // ============================================================
+    // TEST 22
+    // Route Validation
+    // ============================================================
+
+    console.log(
+        "[Mahou Routing Test] --- Route Validation ---"
+    );
+
+
+    var duplicateRoutePoints = {
+        attributes: {
+            fire: 1
+        },
+
+        abilities: {}
+    };
+
+
+    var duplicateRoutesAccepted =
+        calculator.validateRoutes(
+
+            [
+                {
+                    to: "A",
+                    points:
+                        duplicateRoutePoints
+                },
+
+                {
+                    to: "A",
+                    points:
+                        duplicateRoutePoints
+                }
+            ],
+
+            [
+                "A",
+                "B"
+            ]
+        );
+
+
+    assertTrue(
+        "duplicate route target is rejected",
+        duplicateRoutesAccepted === false
+    );
+
+
+    var uniqueRoutesAccepted =
+        calculator.validateRoutes(
+
+            [
+                {
+                    to: "A",
+                    points:
+                        duplicateRoutePoints
+                },
+
+                {
+                    to: "B",
+                    points:
+                        duplicateRoutePoints
+                }
+            ],
+
+            [
+                "A",
+                "B"
+            ]
+        );
+
+
+    assertTrue(
+        "unique route targets are accepted",
+        uniqueRoutesAccepted === true
+    );
 
     // ============================================================
     // FINAL SUMMARY

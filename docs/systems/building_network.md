@@ -11,7 +11,9 @@ Mahou 的建筑系统以六十四卦建筑为核心。
 ```text
 建筑基础数值
 +
-六十四卦网络规则
+节点点数规则（Network Rule）
++
+路由规则（Routing Rule）
 +
 有向图结构
 ```
@@ -22,21 +24,21 @@ Mahou 的建筑系统以六十四卦建筑为核心。
 
 ```text
 世界中的 Boss / Structure
-        ↓
+        ↓
 获得 Building
-        ↓
+        ↓
 在个人维度中放置
-        ↓
+        ↓
 使用有向线连接
-        ↓
+        ↓
 形成 Building Network
-        ↓
+        ↓
 进行网络计算
-        ↓
+        ↓
 得到属性点 + 能力点
-        ↓
+        ↓
 统一非线性换算
-        ↓
+        ↓
 得到玩家实际属性
 ```
 
@@ -346,13 +348,13 @@ Mahou 应尽量把所有可以连续量化的增益纳入统一点数体系。
 
 ```text
 所有来源
-   ↓
+   ↓
 Point Contribution
-   ↓
+   ↓
 统一汇总
-   ↓
+   ↓
 Soft-cap Function
-   ↓
+   ↓
 Final Stat
 ```
 
@@ -372,17 +374,17 @@ Final Stat
 
 一种候选形式为：
 
-\[
+\\[
 V(P)=V_{\max}\frac{P}{K+P}
-\]
+\\]
 
 其中：
 
 ```text
-P      = 总点数
-V(P)   = 最终属性增益
-Vmax   = 理论极限
-K      = 达到约一半理论极限时需要的点数
+P      = 总点数
+V(P)   = 最终属性增益
+Vmax   = 理论极限
+K      = 达到约一半理论极限时需要的点数
 ```
 
 例如：
@@ -434,7 +436,7 @@ K      = 达到约一半理论极限时需要的点数
 药水 20
 =
 总点数 60
-        ↓
+        ↓
 统一经过一次软上限曲线
 ```
 
@@ -621,7 +623,8 @@ Building Instance
 来源结构
 Boss
 基础点数
-网络规则
+Network Rule / Network Params
+Routing Rule / Routing Params
 介绍文本
 功能说明
 ```
@@ -702,7 +705,7 @@ A → B
 
 ```text
 from = A
-to   = B
+to   = B
 ```
 
 Edge 不应存储在 Building Definition 中。
@@ -744,8 +747,8 @@ Edge = Directed Connection
 
 ```text
 A → B → C
-    ↓
-    D
+    ↓
+    D
 ```
 
 对应：
@@ -795,35 +798,74 @@ B → D
 
 ---
 
-# 17. 六十四卦网络规则
+# 17. 点数规则、路由规则与图拓扑
 
-六十四卦的核心差异不应只表现为数值不同。
+建筑网络中的计算行为分成三个不同层次：
 
-它们可以改变点数在网络中的计算方式。
+```text
+Graph Topology
++
+Network Rule
++
+Routing Rule
+```
 
-基础 Network Rule 类型可以包括：
+三者不应混为同一种机制。
+
+---
+
+## 17.1 Network Rule
+
+Network Rule 负责：
+
+> 一个建筑节点收到点数以后，点数本身如何变化。
+
+当前已经实现的基础规则包括：
+
+```text
+PASS
+AMPLIFY
+CONVERT
+```
+
+例如：
+
+```text
+火 8
+↓
+AMPLIFY ×1.25
+↓
+火 10
+```
+
+或者：
+
+```text
+火 10
+↓
+CONVERT
+↓
+火 5
+风 5
+```
+
+未来可以继续增加：
 
 ```text
 ADD
-AMPLIFY
 DECAY
-CONVERT
-SPLIT
-MERGE
-RETURN
 FILTER
 LIMIT
 BALANCE
 TRANSFER
 STORE
 RELEASE
-REDIRECT
 EXCHANGE
 ```
 
-未来可以继续增加新的通用规则。
+等通用点数处理规则。
 
-建筑定义只需要引用：
+建筑定义通过：
 
 ```text
 networkRule
@@ -831,11 +873,172 @@ networkRule
 networkParams
 ```
 
-不需要为每一个卦重新写一套完全独立的程序。
+引用这些规则。
+
+原则上不应为每一个六十四卦单独编写一整套算法。
 
 ---
 
-# 18. 网络规则作用对象
+## 17.2 Routing Rule
+
+Routing Rule 负责：
+
+> 一个节点完成 Network Rule 计算以后，输出点数如何沿出边发送。
+
+当前已经实现：
+
+```text
+equal
+weighted
+broadcast
+```
+
+### equal
+
+默认规则。
+
+如果一个节点存在两条出边：
+
+```text
+      → B
+A →
+      → C
+```
+
+A 输出：
+
+```text
+火 10
+```
+
+则：
+
+```text
+B 收到火 5
+C 收到火 5
+```
+
+总流量守恒。
+
+### weighted
+
+根据 Directed Edge 上的 `weight` 分配。
+
+例如：
+
+```text
+A → B weight=3
+A → C weight=1
+```
+
+若 A 输出火 10：
+
+```text
+B 收到 7.5
+C 收到 2.5
+```
+
+权重只决定分配比例，总流量仍然守恒。
+
+`weight` 必须是有限数字。
+
+未填写 `weight` 时默认视为 1。
+
+负权重按 0 处理。
+
+### broadcast
+
+每一条出边都获得完整输出。
+
+例如：
+
+```text
+A 输出火 10
+```
+
+两个后继都会收到：
+
+```text
+B = 火 10
+C = 火 10
+```
+
+因此 broadcast 会增加网络中的总流量。
+
+它属于明确的特殊能力，不能作为默认分叉逻辑。
+
+建筑定义通过：
+
+```text
+routingRule
++
+routingParams
+```
+
+引用路由规则。
+
+---
+
+## 17.3 Graph Topology
+
+普通的：
+
+```text
+分叉
+汇聚
+```
+
+首先属于有向图结构，而不是特殊 Network Rule。
+
+例如：
+
+```text
+      B
+     ↗
+A
+     ↘
+      C
+```
+
+表示 A 的出度为 2。
+
+而：
+
+```text
+A →
+     → C
+B →
+```
+
+表示 C 的入度为 2。
+
+默认情况下：
+
+```text
+分叉
+→ 由 Routing Rule 决定输出如何分配
+
+汇聚
+→ 多条输入流直接求和
+```
+
+因此普通 `SPLIT` 和 `MERGE` 不需要作为节点点数规则重复实现。
+
+只有当某个六十四卦需要：
+
+```text
+特殊分流
+复制
+偏置流量
+汇聚增益
+汇聚损耗
+```
+
+时，才通过 Network Rule、Routing Rule 或二者组合表达。
+
+---
+
+# 18. 规则作用对象
 
 Network Rule 可以作用于：
 
@@ -847,19 +1050,40 @@ Network Rule 可以作用于：
 某个能力点
 输入最高的点数
 输入最低的点数
-某条入边
-某条出边
-全部入边
-全部出边
 ```
 
-具体由建筑定义提供参数。
+Routing Rule 主要作用于：
+
+```text
+全部出边
+某条出边
+出边权重
+输出流量比例
+```
+
+具体行为由建筑定义中的参数决定。
 
 ---
 
-# 19. 网络规则触发条件
+# 19. 规则触发条件与图上下文
 
-可能包括：
+Network Rule 和 Routing Rule 都可以读取当前节点的图结构信息。
+
+当前 Calculator 已可以提供：
+
+```text
+indegree
+outdegree
+isStart
+isTerminal
+depth
+pathLength
+predecessors
+successors
+networkSize
+```
+
+因此未来规则可以设计为：
 
 ```text
 始终触发
@@ -868,21 +1092,15 @@ Network Rule 可以作用于：
 作为网络终点时
 入度 ≥ N
 出度 ≥ N
-只有一个入边
-只有一个出边
 发生分叉时
 发生汇聚时
-处于闭环时
-不处于闭环时
 路径长度 ≥ N
 某类点数 ≥ N
-连接同属性建筑
-连接异属性建筑
 ```
 
-第一版不需要全部实现。
+闭环相关条件需要等 Cycle 计算语义正式确定后再加入。
 
-规则库应该随实际六十四卦设计逐渐增加。
+规则库应该随实际六十四卦设计逐步扩展，而不是提前一次实现全部可能性。
 
 ---
 
@@ -981,12 +1199,18 @@ Boss
 
 ```text
 节点角色
-网络规则
-规则参数
+
+Network Rule
+Network Params
+
+Routing Rule
+Routing Params
+
 作用对象
 触发条件
 方向要求
 拓扑要求
+
 传播 / 转换逻辑
 ```
 
@@ -1095,15 +1319,15 @@ UI展示
 
 ```text
 玩家执行收起
-        ↓
+        ↓
 找到 Building Instance
-        ↓
+        ↓
 保存必要状态
-        ↓
+        ↓
 处理对应 Directed Edges
-        ↓
+        ↓
 移除世界结构
-        ↓
+        ↓
 生成建筑核心 / 建筑物品
 ```
 
@@ -1115,13 +1339,13 @@ UI展示
 
 ```text
 建筑核心
-        ↓
+        ↓
 选择放置位置
-        ↓
+        ↓
 Structure Placement
-        ↓
+        ↓
 生成对应建筑
-        ↓
+        ↓
 创建 / 恢复 Building Instance
 ```
 
@@ -1178,6 +1402,16 @@ rotation
 建筑之间如何连接
 ```
 
+Directed Edge 当前可以记录：
+
+```text
+from
+to
+weight（可选）
+```
+
+其中 `weight` 只是边参数，只有对应 Routing Rule 读取它时才产生意义。
+
 ---
 
 ## Network Rules
@@ -1185,8 +1419,38 @@ rotation
 负责：
 
 ```text
-点数经过建筑和网络以后怎样变化
+节点收到点数以后，
+点数本身如何变化
 ```
+
+当前已经实现：
+
+```text
+pass
+amplify
+convert
+```
+
+---
+
+## Network Routing Rules
+
+负责：
+
+```text
+节点完成点数计算以后，
+输出点数如何沿出边传播
+```
+
+当前已经实现：
+
+```text
+equal
+weighted
+broadcast
+```
+
+Routing Rule 与 Graph Topology 分离。
 
 ---
 
@@ -1196,6 +1460,18 @@ rotation
 
 ```text
 组织一次完整网络计算
+```
+
+包括：
+
+```text
+建立图
+拓扑排序
+汇总输入
+调用 Network Rule
+调用 Routing Rule
+沿边传播
+汇总终端输出
 ```
 
 ---
@@ -1214,14 +1490,24 @@ rotation
 
 第一版暂时不提前拆过多目录。
 
-可以先使用：
+当前核心结构为：
 
 ```text
 kubejs/startup_scripts/building_network/
 ├─ building_definitions.js
 ├─ network_rules.js
+├─ network_routing_rules.js
 ├─ network_calculator.js
 └─ stat_resolver.js
+```
+
+测试脚本放在：
+
+```text
+kubejs/server_scripts/
+├─ building_network_test.js
+├─ building_network_graph_test.js
+└─ building_network_routing_test.js
 ```
 
 后续真正需要时再增加：
@@ -1257,7 +1543,8 @@ serializers/
 ```js
 yi: {
     id: "yi",
-    hexagram: 42,
+    hexagramNumber: 42,
+    hexagramName: "益",
 
     upperTrigram: "xun",
     lowerTrigram: "zhen",
@@ -1274,11 +1561,16 @@ yi: {
         attackSpeed: 2
     },
 
-    networkRule: "path_growth",
+    networkRule: "amplify",
 
     networkParams: {
-        target: "thunder"
+        targetType: "attribute",
+        target: "thunder",
+        multiplier: 1.20
     },
+
+    routingRule: "equal",
+    routingParams: {},
 
     effectTag: "传播增益",
 
@@ -1286,28 +1578,38 @@ yi: {
         "上巽下震，风行雷动，损上益下，其势愈行愈盛。",
 
     description:
-        "雷属性点沿有向路径传播时逐渐增强。"
+        "示例建筑。具体机制仍需在正式卦象设计阶段确定。"
 }
 ```
 
-具体字段仍然可以在第一批建筑原型设计过程中调整。
+具体字段仍然可以在第一批正式建筑原型设计过程中调整。
 
 ---
 
 # 32. Network Rules
 
-`network_rules.js` 负责通用算法。
+`network_rules.js` 负责通用的节点内点数算法。
 
-例如：
+当前包括：
 
 ```text
-path_growth
-split
-merge
+pass
+amplify
 convert
-return
+```
+
+未来可以根据正式卦象逐步增加：
+
+```text
+add
+decay
+filter
 limit
 balance
+transfer
+store
+release
+exchange
 ```
 
 Network Rule 不应该知道：
@@ -1326,31 +1628,85 @@ params
 network context
 ```
 
+普通分叉和普通汇聚属于图拓扑，不需要再次实现成 `split` / `merge` 点数规则。
+
 ---
 
-# 33. Network Calculator
+# 33. Network Routing Rules
+
+`network_routing_rules.js` 负责节点输出的传播方式。
+
+当前包括：
+
+```text
+equal
+weighted
+broadcast
+```
+
+其中：
+
+```text
+equal
+= 所有出边守恒均分
+
+weighted
+= 按 edge.weight 归一化分配，总量守恒
+
+broadcast
+= 每条出边获得完整输出，显式允许增加总流量
+```
+
+`weight` 的约定为：
+
+```text
+未填写
+→ 默认 1
+
+负数
+→ 按 0 处理
+
+NaN / Infinity / 非数字
+→ 属于非法边数据，Calculator 应拒绝
+```
+
+Routing Rule 不负责决定“谁和谁连接”，只负责决定已有出边如何获得流量。
+
+---
+
+# 34. Network Calculator
 
 `network_calculator.js` 负责组织计算流程。
 
-大致流程：
+当前大致流程：
 
 ```text
-读取网络
+读取 Building Instance + Directed Edge
 ↓
 建立有向图
 ↓
-读取 Building Definition
+检查连通性与非法边
 ↓
-获得基础属性点和能力点
+拓扑排序
 ↓
-分析路径 / 分叉 / 汇聚 / 回路
+汇总每个节点的所有上游输入
 ↓
-调用对应 Network Rule
+加入 Building Definition 的基础点数
 ↓
-进行传播和转换
+执行 Network Rule
+↓
+执行 Routing Rule
+↓
+沿 Directed Edge 传播
+↓
+汇聚节点自动求和
+↓
+汇总所有终端节点输出
 ↓
 得到最终 Point Result
 ```
+
+当前 Calculator 支持 DAG，但拒绝 Cycle。
 
 Network Calculator 不应包含：
 
@@ -1367,13 +1723,15 @@ if 建筑 == 复
 Building Definition
 +
 Network Rule
++
+Routing Rule
 ```
 
 共同决定。
 
 ---
 
-# 34. Stat Resolver
+# 35. Stat Resolver
 
 `stat_resolver.js` 只负责：
 
@@ -1413,7 +1771,7 @@ Stat Resolver 再决定：
 
 ---
 
-# 35. 三条代码接口原则
+# 36. 三条代码接口原则
 
 即使第一版实现非常简单，也应尽量保证以下三条原则。
 
@@ -1477,62 +1835,41 @@ Stat Resolver
 
 ---
 
-# 36. 第一版原型目标
+# 37. 第一版原型目标
 
-第一版不需要立即实现 64 个真实建筑。
-
-可以先创建少量虚拟 Building Definition，例如：
+当前底层原型已经验证：
 
 ```text
-A
-B
-C
-D
+线性网络
+分叉
+汇聚
+多起点
+多终点
+DAG
+equal routing
+weighted routing
+broadcast routing
+Network Rule + Routing Rule 组合
+Stat Resolver
 ```
 
-构造：
+因此下一阶段不需要继续无限扩充虚拟规则。
+
+更有价值的目标是：
 
 ```text
-A → B → C
+选择少量正式六十四卦建筑
+↓
+用当前框架实际实现
+↓
+检查现有抽象是否足够
+↓
+只有在真实设计需要时再扩展底层规则
 ```
-
-和：
-
-```text
-      B
-     ↗
-A
-     ↘
-      C
-```
-
-等简单网络。
-
-第一版只需要验证：
-
-```text
-读取 Building Definition
-↓
-建立 Directed Graph
-↓
-获得基础点数
-↓
-执行 Network Rule
-↓
-得到最终属性点 / 能力点
-↓
-经过 Stat Resolver
-↓
-得到最终属性
-```
-
-这一整条链能够稳定运行。
-
-确认架构有效以后，再正式开始填充六十四卦。
 
 ---
 
-# 37. 总结
+# 38. 总结
 
 建筑系统可以概括为：
 
@@ -1544,13 +1881,16 @@ Building Instance
 = 建筑现在在哪里
 
 Directed Edge
-= 建筑怎么连接
+= 建筑怎么连接，以及可选的边参数
 
 Network Rule
-= 连接以后怎么算
+= 节点内的点数如何变化
+
+Routing Rule
+= 节点输出如何沿出边传播
 
 Network Calculator
-= 组织完整计算
+= 组织完整网络计算
 
 Stat Resolver
 = 点数如何变成最终数值
@@ -1558,7 +1898,7 @@ Stat Resolver
 
 整个系统的核心原则是：
 
-> 建筑负责提供数值和参与网络计算，有向连线决定网络结构，六十四卦决定点数如何在网络中变化，所有连续型收益最终汇入统一点数系统，并在所有来源汇总以后通过软上限转换为最终属性。
+> 建筑提供数值并参与网络计算，有向连线决定图结构，Network Rule 决定点数本身如何变化，Routing Rule 决定输出如何传播；所有连续型收益最终汇入统一点数系统，并在所有来源汇总以后通过软上限转换为最终属性。
 
 世界中的建筑方块只是系统的表现形式。
 
@@ -1568,6 +1908,8 @@ Stat Resolver
 Building Definition
 Building Instance
 Directed Graph
+Network Rule
+Routing Rule
 ```
 
 之上，从而为未来的：

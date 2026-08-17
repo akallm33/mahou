@@ -470,6 +470,42 @@ global.MahouNetworkCalculator = {
             // filter
             // 等。
 
+            // ----------------------------------------------------
+            // Edge Weight Validation
+            // ----------------------------------------------------
+            //
+            // undefined / null：
+            // 表示没有显式设置 weight。
+            //
+            // 显式设置时必须是有限数字。
+            //
+            // 负数目前允许进入图，
+            // Routing Rule 会把它 clamp 到 0。
+            //
+            // NaN / Infinity / string：
+            // 属于错误数据，直接拒绝网络。
+
+            if (
+                edge.weight !== undefined &&
+                edge.weight !== null
+            ) {
+                if (
+                    typeof edge.weight !== "number" ||
+                    !isFinite(edge.weight)
+                ) {
+                    console.error(
+                        "[Mahou] Edge weight must be a finite number: " +
+                        edge.from +
+                        " -> " +
+                        edge.to +
+                        ", weight=" +
+                        edge.weight
+                    );
+
+                    return null;
+                }
+            }
+
             var storedEdge = {
                 from:
                     edge.from,
@@ -479,8 +515,8 @@ global.MahouNetworkCalculator = {
             };
 
             if (
-                edge.weight !==
-                undefined
+                edge.weight !== undefined &&
+                edge.weight !== null
             ) {
                 storedEdge.weight =
                     edge.weight;
@@ -1206,6 +1242,7 @@ global.MahouNetworkCalculator = {
 
 
         var allowed = {};
+        var seenTargets = {};
 
 
         for (
@@ -1254,9 +1291,137 @@ global.MahouNetworkCalculator = {
             }
 
 
+            // 同一次 Routing Rule 中，
+            // 一个直接后继最多出现一次。
+            //
+            // 如果以后某种机制确实需要对同一条边
+            // 做多个阶段的流量操作，
+            // 应在 Routing Rule 内部先合并，
+            // 而不是返回重复 route。
+
+            var targetKey =
+                "$" +
+                route.to;
+
             if (
-                !route.points
+                seenTargets[
+                    targetKey
+                ]
             ) {
+                console.error(
+                    "[Mahou] Routing rule returned duplicate routes to: " +
+                    route.to
+                );
+
+                return false;
+            }
+
+            seenTargets[
+                targetKey
+            ] = true;
+
+
+            if (!route.points) {
+                console.error(
+                    "[Mahou] Routing rule returned a route without points."
+                );
+
+                return false;
+            }
+        }
+
+
+        return true;
+    },    validateRoutes: function (
+        routes,
+        outgoing
+    ) {
+        if (!routes) {
+            return false;
+        }
+
+
+        var allowed = {};
+        var seenTargets = {};
+
+
+        for (
+            var i = 0;
+            i < outgoing.length;
+            i++
+        ) {
+            allowed[
+                outgoing[i]
+            ] = true;
+        }
+
+
+        for (
+            var r = 0;
+            r < routes.length;
+            r++
+        ) {
+            var route =
+                routes[r];
+
+
+            if (
+                !route ||
+                !route.to
+            ) {
+                console.error(
+                    "[Mahou] Routing rule returned an invalid route."
+                );
+
+                return false;
+            }
+
+
+            if (
+                !allowed[
+                    route.to
+                ]
+            ) {
+                console.error(
+                    "[Mahou] Routing rule attempted to route to a non-successor: " +
+                    route.to
+                );
+
+                return false;
+            }
+
+
+            // 同一次 Routing Rule 中，
+            // 一个直接后继最多出现一次。
+            //
+            // 如果以后某种机制确实需要对同一条边
+            // 做多个阶段的流量操作，
+            // 应在 Routing Rule 内部先合并，
+            // 而不是返回重复 route。
+
+            var targetKey =
+                "$" +
+                route.to;
+
+            if (
+                seenTargets[
+                    targetKey
+                ]
+            ) {
+                console.error(
+                    "[Mahou] Routing rule returned duplicate routes to: " +
+                    route.to
+                );
+
+                return false;
+            }
+
+            seenTargets[
+                targetKey
+            ] = true;
+
+
+            if (!route.points) {
                 console.error(
                     "[Mahou] Routing rule returned a route without points."
                 );
