@@ -374,9 +374,9 @@ Final Stat
 
 一种候选形式为：
 
-\\[
+$$
 V(P)=V_{\max}\frac{P}{K+P}
-\\]
+$$
 
 其中：
 
@@ -704,8 +704,9 @@ A → B
 可以表示为：
 
 ```text
-from = A
-to   = B
+from   = A
+to     = B
+weight = 可选的路由权重
 ```
 
 Edge 不应存储在 Building Definition 中。
