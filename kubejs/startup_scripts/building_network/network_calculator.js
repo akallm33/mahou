@@ -1,53 +1,61 @@
 // Mahou Building Network
 // Network Calculator
 //
-// 这个文件负责组织建筑网络的一次完整计算。
+// 负责组织一次完整的建筑网络计算。
 //
 // 当前支持：
 //
-// - 单节点网络
-// - 线性有向网络
-// - 多起点汇聚
+// - 单节点
+// - 线性网络
 // - 分叉
-// - 分叉后重新汇聚
-// - 任意无环有向图（DAG）
+// - 汇聚
+// - 多起点
+// - 多终点
+// - 任意 DAG
+// - Routing Rule
+// - Edge Weight
 //
 // 当前暂不支持：
 //
-// - 闭环 / Cycle
+// - Cycle / 闭环
 //
-// 基础拓扑原则：
+// ============================================================
 //
-// 1. 分叉默认守恒均分
+// 职责划分：
 //
-//        → B
-//    A →
-//        → C
+// Building Definition
+//     ↓
+// Network Rule
+//     修改“点数是什么”
 //
-// 如果 A 输出 10 点，而有两个出边：
+//     ↓
 //
-// B 收到 5
-// C 收到 5
+// Routing Rule
+//     决定“点数往哪里走”
 //
-// 2. 汇聚默认直接求和
+//     ↓
 //
-// A →
-//     → C
-// B →
+// Directed Edge
+//     保存连接关系以及边自己的参数
+//     例如 weight
 //
-// A 输出 5，B 输出 3：
+// ============================================================
 //
-// C 收到 8
+// 默认行为：
 //
-// 3. 图本身不凭空创造点数。
-//    额外复制、增殖、特殊比例等行为以后由具体 Network Rule 提供。
+// 如果建筑没有声明 routingRule：
 //
-// 4. 所有终端节点的最终输出相加，形成整个网络的最终 Point Result。
+// routingRule = "equal"
+//
+// 即：
+// 所有出边守恒均分。
+//
+// ============================================================
 
 global.MahouNetworkCalculator = {
 
     // ============================================================
-    // Point Result
+    // Point Helpers
     // ============================================================
 
     createEmptyPoints: function () {
@@ -59,23 +67,38 @@ global.MahouNetworkCalculator = {
 
 
     clonePoints: function (input) {
-        var result = this.createEmptyPoints();
+        var result =
+            this.createEmptyPoints();
 
         if (!input) {
             return result;
         }
 
         if (input.attributes) {
-            for (var attributeKey in input.attributes) {
-                result.attributes[attributeKey] =
-                    input.attributes[attributeKey];
+            for (
+                var attributeKey
+                in input.attributes
+            ) {
+                result.attributes[
+                    attributeKey
+                ] =
+                    input.attributes[
+                        attributeKey
+                    ];
             }
         }
 
         if (input.abilities) {
-            for (var abilityKey in input.abilities) {
-                result.abilities[abilityKey] =
-                    input.abilities[abilityKey];
+            for (
+                var abilityKey
+                in input.abilities
+            ) {
+                result.abilities[
+                    abilityKey
+                ] =
+                    input.abilities[
+                        abilityKey
+                    ];
             }
         }
 
@@ -83,48 +106,54 @@ global.MahouNetworkCalculator = {
     },
 
 
-    // ============================================================
-    // 点数合并
-    // ============================================================
-    //
-    // 相同点数直接相加。
-    //
-    // 例如：
-    //
-    // A:
-    // 火 3
-    // 风 2
-    //
-    // B:
-    // 火 4
-    // 雷 5
-    //
-    // ↓
-    //
-    // 火 7
-    // 风 2
-    // 雷 5
-
-    addPoints: function (target, addition) {
-        var result = this.clonePoints(target);
+    addPoints: function (
+        target,
+        addition
+    ) {
+        var result =
+            this.clonePoints(
+                target
+            );
 
         if (!addition) {
             return result;
         }
 
         if (addition.attributes) {
-            for (var attributeKey in addition.attributes) {
-                result.attributes[attributeKey] =
-                    (result.attributes[attributeKey] || 0) +
-                    addition.attributes[attributeKey];
+            for (
+                var attributeKey
+                in addition.attributes
+            ) {
+                result.attributes[
+                    attributeKey
+                ] =
+                    (
+                        result.attributes[
+                            attributeKey
+                        ] || 0
+                    ) +
+                    addition.attributes[
+                        attributeKey
+                    ];
             }
         }
 
         if (addition.abilities) {
-            for (var abilityKey in addition.abilities) {
-                result.abilities[abilityKey] =
-                    (result.abilities[abilityKey] || 0) +
-                    addition.abilities[abilityKey];
+            for (
+                var abilityKey
+                in addition.abilities
+            ) {
+                result.abilities[
+                    abilityKey
+                ] =
+                    (
+                        result.abilities[
+                            abilityKey
+                        ] || 0
+                    ) +
+                    addition.abilities[
+                        abilityKey
+                    ];
             }
         }
 
@@ -132,44 +161,51 @@ global.MahouNetworkCalculator = {
     },
 
 
-    // ============================================================
-    // 点数整体缩放
-    // ============================================================
-    //
-    // 用于分叉时进行守恒均分。
-    //
-    // 例如：
-    //
-    // 火 10
-    // 攻击 4
-    //
-    // factor = 0.5
-    //
-    // ↓
-    //
-    // 火 5
-    // 攻击 2
+    scalePoints: function (
+        input,
+        factor
+    ) {
+        var result =
+            this.createEmptyPoints();
 
-    scalePoints: function (input, factor) {
-        var result = this.createEmptyPoints();
-
-        factor = factor || 0;
+        if (
+            factor === undefined ||
+            factor === null
+        ) {
+            factor = 0;
+        }
 
         if (!input) {
             return result;
         }
 
         if (input.attributes) {
-            for (var attributeKey in input.attributes) {
-                result.attributes[attributeKey] =
-                    input.attributes[attributeKey] * factor;
+            for (
+                var attributeKey
+                in input.attributes
+            ) {
+                result.attributes[
+                    attributeKey
+                ] =
+                    input.attributes[
+                        attributeKey
+                    ] *
+                    factor;
             }
         }
 
         if (input.abilities) {
-            for (var abilityKey in input.abilities) {
-                result.abilities[abilityKey] =
-                    input.abilities[abilityKey] * factor;
+            for (
+                var abilityKey
+                in input.abilities
+            ) {
+                result.abilities[
+                    abilityKey
+                ] =
+                    input.abilities[
+                        abilityKey
+                    ] *
+                    factor;
             }
         }
 
@@ -178,10 +214,12 @@ global.MahouNetworkCalculator = {
 
 
     // ============================================================
-    // 获取建筑定义
+    // Building Definitions
     // ============================================================
 
-    getBuildingDefinition: function (buildingType) {
+    getBuildingDefinition: function (
+        buildingType
+    ) {
         var definitions =
             global.MahouBuildingDefinitions;
 
@@ -194,7 +232,9 @@ global.MahouNetworkCalculator = {
         }
 
         var definition =
-            definitions[buildingType];
+            definitions[
+                buildingType
+            ];
 
         if (!definition) {
             console.error(
@@ -209,30 +249,37 @@ global.MahouNetworkCalculator = {
     },
 
 
-    // ============================================================
-    // 获取建筑自身基础点数
-    // ============================================================
-
-    getBasePoints: function (definition) {
+    getBasePoints: function (
+        definition
+    ) {
         return {
             attributes:
-                definition.attributePoints || {},
+                definition.attributePoints ||
+                {},
 
             abilities:
-                definition.abilityPoints || {}
+                definition.abilityPoints ||
+                {}
         };
     },
 
 
     // ============================================================
-    // 建立节点索引
+    // Node Map
     // ============================================================
 
-    buildNodeMap: function (nodes) {
+    buildNodeMap: function (
+        nodes
+    ) {
         var map = {};
 
-        for (var i = 0; i < nodes.length; i++) {
-            var node = nodes[i];
+        for (
+            var i = 0;
+            i < nodes.length;
+            i++
+        ) {
+            var node =
+                nodes[i];
 
             if (!node.id) {
                 console.error(
@@ -251,7 +298,8 @@ global.MahouNetworkCalculator = {
                 return null;
             }
 
-            map[node.id] = node;
+            map[node.id] =
+                node;
         }
 
         return map;
@@ -259,28 +307,41 @@ global.MahouNetworkCalculator = {
 
 
     // ============================================================
-    // 建立有向图
+    // Graph Construction
     // ============================================================
     //
-    // 输出：
+    // 同时维护：
     //
-    // {
-    //     nodeMap,
-    //     incoming,
-    //     outgoing
-    // }
+    // incoming:
+    //     只有节点 ID
     //
-    // incoming["C"] = ["A", "B"]
+    // outgoing:
+    //     只有节点 ID
     //
-    // 表示：
+    // incomingEdges:
+    //     完整边对象
     //
-    // A →
-    //     → C
-    // B →
+    // outgoingEdges:
+    //     完整边对象
+    //
+    // 这样：
+    //
+    // 拓扑算法只需要节点 ID；
+    //
+    // Routing Rule 则可以读取：
+    //
+    // edge.weight
+    //
+    // 等边参数。
 
-    buildGraph: function (nodes, edges) {
+    buildGraph: function (
+        nodes,
+        edges
+    ) {
         var nodeMap =
-            this.buildNodeMap(nodes);
+            this.buildNodeMap(
+                nodes
+            );
 
         if (!nodeMap) {
             return null;
@@ -288,15 +349,41 @@ global.MahouNetworkCalculator = {
 
         var incoming = {};
         var outgoing = {};
+
+        var incomingEdges = {};
+        var outgoingEdges = {};
+
         var existingEdges = {};
 
-        for (var i = 0; i < nodes.length; i++) {
-            incoming[nodes[i].id] = [];
-            outgoing[nodes[i].id] = [];
+
+        for (
+            var i = 0;
+            i < nodes.length;
+            i++
+        ) {
+            var nodeId =
+                nodes[i].id;
+
+            incoming[nodeId] = [];
+            outgoing[nodeId] = [];
+
+            incomingEdges[nodeId] = [];
+            outgoingEdges[nodeId] = [];
         }
 
-        for (var e = 0; e < edges.length; e++) {
-            var edge = edges[e];
+
+        for (
+            var e = 0;
+            e < edges.length;
+            e++
+        ) {
+            var edge =
+                edges[e];
+
+
+            // ----------------------------------------------------
+            // Endpoint Validation
+            // ----------------------------------------------------
 
             if (!nodeMap[edge.from]) {
                 console.error(
@@ -316,7 +403,15 @@ global.MahouNetworkCalculator = {
                 return null;
             }
 
-            if (edge.from === edge.to) {
+
+            // ----------------------------------------------------
+            // Self-loop
+            // ----------------------------------------------------
+
+            if (
+                edge.from ===
+                edge.to
+            ) {
                 console.error(
                     "[Mahou] Self-loop is not supported: " +
                     edge.from +
@@ -327,12 +422,21 @@ global.MahouNetworkCalculator = {
                 return null;
             }
 
+
+            // ----------------------------------------------------
+            // Duplicate Edge
+            // ----------------------------------------------------
+
             var edgeKey =
                 edge.from +
                 "->" +
                 edge.to;
 
-            if (existingEdges[edgeKey]) {
+            if (
+                existingEdges[
+                    edgeKey
+                ]
+            ) {
                 console.error(
                     "[Mahou] Duplicate edge: " +
                     edge.from +
@@ -343,94 +447,175 @@ global.MahouNetworkCalculator = {
                 return null;
             }
 
-            existingEdges[edgeKey] = true;
+            existingEdges[
+                edgeKey
+            ] = true;
 
-            outgoing[edge.from].push(
+
+            // ----------------------------------------------------
+            // 保存边
+            // ----------------------------------------------------
+            //
+            // 当前只正式使用：
+            //
+            // from
+            // to
+            // weight
+            //
+            // 以后还可以增加：
+            //
+            // enabled
+            // channel
+            // priority
+            // filter
+            // 等。
+
+            var storedEdge = {
+                from:
+                    edge.from,
+
+                to:
+                    edge.to
+            };
+
+            if (
+                edge.weight !==
+                undefined
+            ) {
+                storedEdge.weight =
+                    edge.weight;
+            }
+
+
+            outgoing[
+                edge.from
+            ].push(
                 edge.to
             );
 
-            incoming[edge.to].push(
+            incoming[
+                edge.to
+            ].push(
                 edge.from
+            );
+
+
+            outgoingEdges[
+                edge.from
+            ].push(
+                storedEdge
+            );
+
+            incomingEdges[
+                edge.to
+            ].push(
+                storedEdge
             );
         }
 
+
         return {
-            nodeMap: nodeMap,
-            incoming: incoming,
-            outgoing: outgoing
+            nodeMap:
+                nodeMap,
+
+            incoming:
+                incoming,
+
+            outgoing:
+                outgoing,
+
+            incomingEdges:
+                incomingEdges,
+
+            outgoingEdges:
+                outgoingEdges
         };
     },
 
 
     // ============================================================
-    // 检查整个网络是否连通
+    // Weak Connectivity
     // ============================================================
-    //
-    // 这里检查“弱连通”：
-    //
-    // 暂时忽略箭头方向，
-    // 看所有节点是否属于同一张网络。
-    //
-    // 如果：
-    //
-    // A → B
-    //
-    // C → D
-    //
-    // 则这是两个独立网络，
-    // 不应该作为一次 calculateNetwork 输入。
 
     isWeaklyConnected: function (
         nodes,
         incoming,
         outgoing
     ) {
-        if (nodes.length <= 1) {
+        if (
+            nodes.length <= 1
+        ) {
             return true;
         }
 
         var visited = {};
+
         var stack = [
             nodes[0].id
         ];
 
         var visitedCount = 0;
 
-        while (stack.length > 0) {
+
+        while (
+            stack.length > 0
+        ) {
             var current =
                 stack.pop();
 
-            if (visited[current]) {
+            if (
+                visited[
+                    current
+                ]
+            ) {
                 continue;
             }
 
-            visited[current] = true;
+            visited[
+                current
+            ] = true;
+
             visitedCount++;
 
+
             var parents =
-                incoming[current] || [];
+                incoming[
+                    current
+                ] || [];
 
             var children =
-                outgoing[current] || [];
+                outgoing[
+                    current
+                ] || [];
+
 
             for (
                 var p = 0;
                 p < parents.length;
                 p++
             ) {
-                if (!visited[parents[p]]) {
+                if (
+                    !visited[
+                        parents[p]
+                    ]
+                ) {
                     stack.push(
                         parents[p]
                     );
                 }
             }
 
+
             for (
                 var c = 0;
                 c < children.length;
                 c++
             ) {
-                if (!visited[children[c]]) {
+                if (
+                    !visited[
+                        children[c]
+                    ]
+                ) {
                     stack.push(
                         children[c]
                     );
@@ -438,30 +623,17 @@ global.MahouNetworkCalculator = {
             }
         }
 
-        return visitedCount === nodes.length;
+
+        return (
+            visitedCount ===
+            nodes.length
+        );
     },
 
 
     // ============================================================
-    // 拓扑排序
+    // Topological Sort
     // ============================================================
-    //
-    // 使用 Kahn Algorithm。
-    //
-    // DAG：
-    //
-    // A → B
-    // ↓   ↓
-    // C → D
-    //
-    // 可以得到：
-    //
-    // A, B, C, D
-    //
-    // 或其他合法拓扑顺序。
-    //
-    // 如果最终无法访问所有节点，
-    // 则说明存在闭环。
 
     getTopologicalOrder: function (
         nodes,
@@ -472,33 +644,62 @@ global.MahouNetworkCalculator = {
         var queue = [];
         var order = [];
 
-        for (var i = 0; i < nodes.length; i++) {
+
+        for (
+            var i = 0;
+            i < nodes.length;
+            i++
+        ) {
             var nodeId =
                 nodes[i].id;
 
-            indegree[nodeId] =
-                incoming[nodeId].length;
+            indegree[
+                nodeId
+            ] =
+                incoming[
+                    nodeId
+                ].length;
         }
 
-        // 按 nodes 原始顺序加入队列，
-        // 这样测试结果更稳定。
-        for (var j = 0; j < nodes.length; j++) {
+
+        // 保持 nodes 原始顺序，
+        // 使测试结果稳定。
+
+        for (
+            var j = 0;
+            j < nodes.length;
+            j++
+        ) {
             var startId =
                 nodes[j].id;
 
-            if (indegree[startId] === 0) {
-                queue.push(startId);
+            if (
+                indegree[
+                    startId
+                ] === 0
+            ) {
+                queue.push(
+                    startId
+                );
             }
         }
 
-        while (queue.length > 0) {
+
+        while (
+            queue.length > 0
+        ) {
             var current =
                 queue.shift();
 
-            order.push(current);
+            order.push(
+                current
+            );
 
             var children =
-                outgoing[current];
+                outgoing[
+                    current
+                ];
+
 
             for (
                 var c = 0;
@@ -508,15 +709,28 @@ global.MahouNetworkCalculator = {
                 var child =
                     children[c];
 
-                indegree[child]--;
+                indegree[
+                    child
+                ]--;
 
-                if (indegree[child] === 0) {
-                    queue.push(child);
+
+                if (
+                    indegree[
+                        child
+                    ] === 0
+                ) {
+                    queue.push(
+                        child
+                    );
                 }
             }
         }
 
-        if (order.length !== nodes.length) {
+
+        if (
+            order.length !==
+            nodes.length
+        ) {
             console.error(
                 "[Mahou] Cycle detected. Cycles are not supported yet."
             );
@@ -524,38 +738,21 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
+
         return order;
     },
 
 
     // ============================================================
-    // 计算节点深度
+    // Depth Calculation
     // ============================================================
-    //
-    // 起点：
-    //
-    // depth = 0
-    //
-    // 后继节点：
-    //
-    // depth =
-    // 最大前驱 depth + 1
-    //
-    // 例如：
-    //
-    // A → B → D
-    //  ↘ C ↗
-    //
-    // A = 0
-    // B = 1
-    // C = 1
-    // D = 2
 
     calculateDepths: function (
         order,
         incoming
     ) {
         var depths = {};
+
 
         for (
             var i = 0;
@@ -566,14 +763,24 @@ global.MahouNetworkCalculator = {
                 order[i];
 
             var parents =
-                incoming[nodeId];
+                incoming[
+                    nodeId
+                ];
 
-            if (parents.length === 0) {
-                depths[nodeId] = 0;
+
+            if (
+                parents.length === 0
+            ) {
+                depths[
+                    nodeId
+                ] = 0;
+
                 continue;
             }
 
+
             var maxDepth = 0;
+
 
             for (
                 var p = 0;
@@ -581,7 +788,9 @@ global.MahouNetworkCalculator = {
                 p++
             ) {
                 var parentDepth =
-                    depths[parents[p]] || 0;
+                    depths[
+                        parents[p]
+                    ] || 0;
 
                 if (
                     parentDepth + 1 >
@@ -592,19 +801,26 @@ global.MahouNetworkCalculator = {
                 }
             }
 
-            depths[nodeId] =
+
+            depths[
+                nodeId
+            ] =
                 maxDepth;
         }
+
 
         return depths;
     },
 
 
     // ============================================================
-    // 完整图分析
+    // Graph Analysis
     // ============================================================
 
-    analyzeGraph: function (nodes, edges) {
+    analyzeGraph: function (
+        nodes,
+        edges
+    ) {
         var graph =
             this.buildGraph(
                 nodes,
@@ -614,6 +830,7 @@ global.MahouNetworkCalculator = {
         if (!graph) {
             return null;
         }
+
 
         if (
             !this.isWeaklyConnected(
@@ -629,6 +846,7 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
+
         var order =
             this.getTopologicalOrder(
                 nodes,
@@ -640,8 +858,10 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
+
         var starts = [];
         var terminals = [];
+
 
         for (
             var i = 0;
@@ -651,18 +871,29 @@ global.MahouNetworkCalculator = {
             var nodeId =
                 nodes[i].id;
 
-            if (
-                graph.incoming[nodeId].length === 0
-            ) {
-                starts.push(nodeId);
-            }
 
             if (
-                graph.outgoing[nodeId].length === 0
+                graph.incoming[
+                    nodeId
+                ].length === 0
             ) {
-                terminals.push(nodeId);
+                starts.push(
+                    nodeId
+                );
+            }
+
+
+            if (
+                graph.outgoing[
+                    nodeId
+                ].length === 0
+            ) {
+                terminals.push(
+                    nodeId
+                );
             }
         }
+
 
         var depths =
             this.calculateDepths(
@@ -670,30 +901,46 @@ global.MahouNetworkCalculator = {
                 graph.incoming
             );
 
-        return {
-            nodeMap: graph.nodeMap,
-            incoming: graph.incoming,
-            outgoing: graph.outgoing,
 
-            order: order,
-            starts: starts,
-            terminals: terminals,
-            depths: depths
+        return {
+            nodeMap:
+                graph.nodeMap,
+
+            incoming:
+                graph.incoming,
+
+            outgoing:
+                graph.outgoing,
+
+            incomingEdges:
+                graph.incomingEdges,
+
+            outgoingEdges:
+                graph.outgoingEdges,
+
+            order:
+                order,
+
+            starts:
+                starts,
+
+            terminals:
+                terminals,
+
+            depths:
+                depths
         };
     },
 
 
     // ============================================================
-    // 保留旧接口：检查线性网络
+    // Linear Compatibility Analysis
     // ============================================================
-    //
-    // 旧测试和旧代码仍然可以调用：
-    //
-    // getLinearOrder(...)
-    //
-    // 但内部已经建立在新的图分析器之上。
 
-    getLinearOrder: function (nodes, edges) {
+    getLinearOrder: function (
+        nodes,
+        edges
+    ) {
         var topology =
             this.analyzeGraph(
                 nodes,
@@ -703,6 +950,7 @@ global.MahouNetworkCalculator = {
         if (!topology) {
             return null;
         }
+
 
         if (
             topology.starts.length !== 1 ||
@@ -715,11 +963,15 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
+
         for (
-            var id in topology.nodeMap
+            var id
+            in topology.nodeMap
         ) {
             if (
-                topology.incoming[id].length > 1
+                topology.incoming[
+                    id
+                ].length > 1
             ) {
                 console.error(
                     "[Mahou] Linear network cannot contain merge at node: " +
@@ -729,8 +981,11 @@ global.MahouNetworkCalculator = {
                 return null;
             }
 
+
             if (
-                topology.outgoing[id].length > 1
+                topology.outgoing[
+                    id
+                ].length > 1
             ) {
                 console.error(
                     "[Mahou] Linear network cannot contain split at node: " +
@@ -741,30 +996,43 @@ global.MahouNetworkCalculator = {
             }
         }
 
+
         return topology.order;
     },
 
 
     // ============================================================
-    // 处理一个建筑节点
+    // Process Node
     // ============================================================
     //
     // 固定顺序：
     //
-    // 上游输入
+    // incoming points
+    //
     //      ↓
-    // 加入建筑自己的基础点数
+    //
+    // building base points
+    //
     //      ↓
-    // 应用 Network Rule
+    //
+    // Network Rule
+    //
     //      ↓
-    // 得到节点输出
+    //
+    // node output
+    //
+    //      ↓
+    //
+    // Routing Rule
 
     processNode: function (
         instance,
         inputPoints,
-        context
+        context,
+        knownDefinition
     ) {
         var definition =
+            knownDefinition ||
             this.getBuildingDefinition(
                 instance.buildingType
             );
@@ -773,6 +1041,7 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
+
         var points =
             this.addPoints(
                 inputPoints,
@@ -780,6 +1049,7 @@ global.MahouNetworkCalculator = {
                     definition
                 )
             );
+
 
         var rules =
             global.MahouNetworkRules;
@@ -792,106 +1062,329 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
-        var output =
-            rules.apply(
-                definition.networkRule ||
-                    "pass",
 
-                points,
+        return rules.apply(
+            definition.networkRule ||
+                "pass",
 
-                definition.networkParams ||
-                    {},
+            points,
 
-                context ||
-                    {}
-            );
+            definition.networkParams ||
+                {},
 
-        return output;
+            context || {}
+        );
     },
 
 
     // ============================================================
-    // 分配节点输出
+    // Routing Successor Conversion
     // ============================================================
     //
-    // 当前默认：
+    // Graph 内部保存：
     //
-    // outdegree = 1
+    // {
+    //     from: "A",
+    //     to: "B",
+    //     weight: 3
+    // }
     //
-    // 全部输出。
+    // Routing Rule 只需要：
     //
-    // outdegree = 2
+    // {
+    //     to: "B",
+    //     weight: 3
+    // }
+
+    buildRoutingSuccessors: function (
+        outgoingEdges
+    ) {
+        var successors = [];
+
+
+        for (
+            var i = 0;
+            i < outgoingEdges.length;
+            i++
+        ) {
+            var edge =
+                outgoingEdges[i];
+
+            var successor = {
+                to:
+                    edge.to
+            };
+
+
+            if (
+                edge.weight !==
+                undefined
+            ) {
+                successor.weight =
+                    edge.weight;
+            }
+
+
+            successors.push(
+                successor
+            );
+        }
+
+
+        return successors;
+    },
+
+
+    // ============================================================
+    // Routing
+    // ============================================================
+
+    routeOutput: function (
+        definition,
+        output,
+        outgoingEdges,
+        context
+    ) {
+        var routingRules =
+            global.MahouNetworkRoutingRules;
+
+
+        if (!routingRules) {
+            console.error(
+                "[Mahou] Network routing rules are not available."
+            );
+
+            return null;
+        }
+
+
+        var successors =
+            this.buildRoutingSuccessors(
+                outgoingEdges
+            );
+
+
+        var routingRule =
+            definition.routingRule ||
+            "equal";
+
+
+        var routingParams =
+            definition.routingParams ||
+            {};
+
+
+        return routingRules.apply(
+            routingRule,
+            output,
+            successors,
+            routingParams,
+            context || {}
+        );
+    },
+
+
+    // ============================================================
+    // Route Validation
+    // ============================================================
     //
-    // 每条边 1/2。
+    // 当前阶段 Routing Rule 只能把点数发送给
+    // “真正存在的直接后继”。
     //
-    // outdegree = 3
+    // 不能凭空跳到网络中其他节点。
     //
-    // 每条边 1/3。
+    // 以后如果做 Redirect 类型卦象，
+    // 再专门扩展这里。
+
+    validateRoutes: function (
+        routes,
+        outgoing
+    ) {
+        if (!routes) {
+            return false;
+        }
+
+
+        var allowed = {};
+
+
+        for (
+            var i = 0;
+            i < outgoing.length;
+            i++
+        ) {
+            allowed[
+                outgoing[i]
+            ] = true;
+        }
+
+
+        for (
+            var r = 0;
+            r < routes.length;
+            r++
+        ) {
+            var route =
+                routes[r];
+
+
+            if (
+                !route ||
+                !route.to
+            ) {
+                console.error(
+                    "[Mahou] Routing rule returned an invalid route."
+                );
+
+                return false;
+            }
+
+
+            if (
+                !allowed[
+                    route.to
+                ]
+            ) {
+                console.error(
+                    "[Mahou] Routing rule attempted to route to a non-successor: " +
+                    route.to
+                );
+
+                return false;
+            }
+
+
+            if (
+                !route.points
+            ) {
+                console.error(
+                    "[Mahou] Routing rule returned a route without points."
+                );
+
+                return false;
+            }
+        }
+
+
+        return true;
+    },
+
+
+    // ============================================================
+    // Compatibility Helper
+    // ============================================================
     //
-    // 因此图结构本身守恒。
+    // 旧代码中的：
     //
-    // 以后如果某个卦允许：
+    // distributeOutput(...)
     //
-    // - 不等比例分流
-    // - 复制
-    // - 分流增益
+    // 继续保留。
     //
-    // 可以在这里增加由 Network Rule /
-    // Routing Rule 提供的覆盖机制。
+    // 默认仍然执行 equal。
+    //
+    // 以后正式代码应优先使用 routeOutput。
 
     distributeOutput: function (
         output,
         successors
     ) {
-        var routes = [];
+        var routingRules =
+            global.MahouNetworkRoutingRules;
 
-        if (
-            !successors ||
-            successors.length === 0
-        ) {
-            return routes;
+
+        // 如果 Routing Rules 尚未加载，
+        // 做一个安全兼容回退。
+
+        if (!routingRules) {
+            var fallbackRoutes = [];
+
+            if (
+                !successors ||
+                successors.length === 0
+            ) {
+                return fallbackRoutes;
+            }
+
+
+            var factor =
+                1.0 /
+                successors.length;
+
+
+            for (
+                var f = 0;
+                f < successors.length;
+                f++
+            ) {
+                var fallbackTarget =
+                    typeof successors[f] ===
+                        "string"
+                        ?
+                        successors[f]
+                        :
+                        successors[f].to;
+
+
+                fallbackRoutes.push({
+                    to:
+                        fallbackTarget,
+
+                    points:
+                        this.scalePoints(
+                            output,
+                            factor
+                        )
+                });
+            }
+
+
+            return fallbackRoutes;
         }
 
-        var shareFactor =
-            1.0 /
-            successors.length;
 
-        var sharedPoints =
-            this.scalePoints(
-                output,
-                shareFactor
-            );
+        var normalized = [];
+
 
         for (
             var i = 0;
             i < successors.length;
             i++
         ) {
-            routes.push({
-                to: successors[i],
-
-                points:
-                    this.clonePoints(
-                        sharedPoints
-                    )
-            });
+            if (
+                typeof successors[i] ===
+                "string"
+            ) {
+                normalized.push({
+                    to:
+                        successors[i]
+                });
+            }
+            else {
+                normalized.push(
+                    successors[i]
+                );
+            }
         }
 
-        return routes;
+
+        return routingRules.apply(
+            "equal",
+            output,
+            normalized,
+            {},
+            {}
+        );
     },
 
 
     // ============================================================
-    // 通用 DAG 网络计算器
+    // Main DAG Calculator
     // ============================================================
-    //
-    // 这是新的主接口：
-    //
-    // calculateNetwork(nodes, edges)
-    //
-    // 支持任意无环有向图。
 
-    calculateNetwork: function (nodes, edges) {
+    calculateNetwork: function (
+        nodes,
+        edges
+    ) {
         if (
             !nodes ||
             nodes.length === 0
@@ -903,7 +1396,10 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
-        edges = edges || [];
+
+        edges =
+            edges || [];
+
 
         var topology =
             this.analyzeGraph(
@@ -915,31 +1411,22 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
-        // --------------------------------------------------------
-        // 每个节点的输入缓存
-        // --------------------------------------------------------
-        //
-        // 所有前驱发来的点数都会先累加到这里。
-        //
-        // 例如：
-        //
-        // A →
-        //     → C
-        // B →
-        //
-        // C 的 inputBuffers["C"]
-        //
-        // 会依次收到 A 和 B 的输出，
-        // 最终在 C 被处理前自动求和。
+
+        // ========================================================
+        // Input Buffers
+        // ========================================================
 
         var inputBuffers = {};
+
 
         for (
             var i = 0;
             i < nodes.length;
             i++
         ) {
-            inputBuffers[nodes[i].id] =
+            inputBuffers[
+                nodes[i].id
+            ] =
                 this.createEmptyPoints();
         }
 
@@ -950,32 +1437,55 @@ global.MahouNetworkCalculator = {
         var history = [];
 
 
-        // --------------------------------------------------------
-        // 按拓扑顺序处理节点
-        // --------------------------------------------------------
+        // ========================================================
+        // Topological Evaluation
+        // ========================================================
 
         for (
             var orderIndex = 0;
-            orderIndex < topology.order.length;
+            orderIndex <
+                topology.order.length;
             orderIndex++
         ) {
             var instanceId =
-                topology.order[orderIndex];
+                topology.order[
+                    orderIndex
+                ];
+
 
             var instance =
                 topology.nodeMap[
                     instanceId
                 ];
 
+
+            var definition =
+                this.getBuildingDefinition(
+                    instance.buildingType
+                );
+
+            if (!definition) {
+                return null;
+            }
+
+
             var predecessors =
                 topology.incoming[
                     instanceId
                 ];
 
+
             var successors =
                 topology.outgoing[
                     instanceId
                 ];
+
+
+            var outgoingEdges =
+                topology.outgoingEdges[
+                    instanceId
+                ];
+
 
             var input =
                 this.clonePoints(
@@ -985,21 +1495,9 @@ global.MahouNetworkCalculator = {
                 );
 
 
-            // ----------------------------------------------------
+            // ====================================================
             // Context
-            // ----------------------------------------------------
-            //
-            // Network Rule 以后可以读取这些图信息。
-            //
-            // 例如：
-            //
-            // 入度
-            // 出度
-            // 是否起点
-            // 是否终点
-            // 深度
-            // 前驱
-            // 后继
+            // ====================================================
 
             var context = {
                 index:
@@ -1014,6 +1512,9 @@ global.MahouNetworkCalculator = {
                 instanceId:
                     instanceId,
 
+                buildingType:
+                    instance.buildingType,
+
                 order:
                     topology.order,
 
@@ -1021,14 +1522,6 @@ global.MahouNetworkCalculator = {
                     topology.depths[
                         instanceId
                     ],
-
-                // 为兼容以前的 context，
-                // pathLength 暂时定义为：
-                //
-                // 从某个起点到当前节点的最大节点数。
-                //
-                // 起点 depth=0
-                // → pathLength=1
 
                 pathLength:
                     topology.depths[
@@ -1061,15 +1554,16 @@ global.MahouNetworkCalculator = {
             };
 
 
-            // ----------------------------------------------------
-            // 节点计算
-            // ----------------------------------------------------
+            // ====================================================
+            // Network Rule
+            // ====================================================
 
             var output =
                 this.processNode(
                     instance,
                     input,
-                    context
+                    context,
+                    definition
                 );
 
             if (!output) {
@@ -1077,18 +1571,16 @@ global.MahouNetworkCalculator = {
             }
 
 
-            // ----------------------------------------------------
-            // 终端节点
-            // ----------------------------------------------------
-            //
-            // 终端没有后继。
-            //
-            // 所有终端输出相加，
-            // 成为整个网络最终结果。
-
             var routedOutputs = [];
 
-            if (successors.length === 0) {
+
+            // ====================================================
+            // Terminal
+            // ====================================================
+
+            if (
+                successors.length === 0
+            ) {
                 finalPoints =
                     this.addPoints(
                         finalPoints,
@@ -1097,18 +1589,40 @@ global.MahouNetworkCalculator = {
             }
 
 
-            // ----------------------------------------------------
-            // 非终端节点
-            // ----------------------------------------------------
-            //
-            // 默认按出边数均分。
+            // ====================================================
+            // Routing Rule
+            // ====================================================
 
             else {
                 routedOutputs =
-                    this.distributeOutput(
+                    this.routeOutput(
+                        definition,
                         output,
-                        successors
+                        outgoingEdges,
+                        context
                     );
+
+
+                if (
+                    !routedOutputs
+                ) {
+                    return null;
+                }
+
+
+                if (
+                    !this.validateRoutes(
+                        routedOutputs,
+                        successors
+                    )
+                ) {
+                    return null;
+                }
+
+
+                // ================================================
+                // Send Route Results
+                // ================================================
 
                 for (
                     var routeIndex = 0;
@@ -1120,6 +1634,7 @@ global.MahouNetworkCalculator = {
                         routedOutputs[
                             routeIndex
                         ];
+
 
                     inputBuffers[
                         route.to
@@ -1135,11 +1650,9 @@ global.MahouNetworkCalculator = {
             }
 
 
-            // ----------------------------------------------------
+            // ====================================================
             // History
-            // ----------------------------------------------------
-            //
-            // 主要供开发测试和以后调试使用。
+            // ====================================================
 
             history.push({
                 instanceId:
@@ -1157,6 +1670,14 @@ global.MahouNetworkCalculator = {
                     this.clonePoints(
                         output
                     ),
+
+                networkRule:
+                    definition.networkRule ||
+                    "pass",
+
+                routingRule:
+                    definition.routingRule ||
+                    "equal",
 
                 indegree:
                     predecessors.length,
@@ -1176,7 +1697,7 @@ global.MahouNetworkCalculator = {
 
 
         // ========================================================
-        // 返回完整计算结果
+        // Final Result
         // ========================================================
 
         return {
@@ -1202,6 +1723,12 @@ global.MahouNetworkCalculator = {
                 outgoing:
                     topology.outgoing,
 
+                incomingEdges:
+                    topology.incomingEdges,
+
+                outgoingEdges:
+                    topology.outgoingEdges,
+
                 depths:
                     topology.depths
             }
@@ -1210,15 +1737,8 @@ global.MahouNetworkCalculator = {
 
 
     // ============================================================
-    // 旧接口兼容
+    // Linear Compatibility API
     // ============================================================
-    //
-    // calculateLinearNetwork 仍然保留。
-    //
-    // 它先确认网络确实是一条线，
-    // 然后交给新的 calculateNetwork。
-    //
-    // 因此之前已经通过的旧测试不需要全部重写。
 
     calculateLinearNetwork: function (
         nodes,
@@ -1235,7 +1755,10 @@ global.MahouNetworkCalculator = {
             return null;
         }
 
-        edges = edges || [];
+
+        edges =
+            edges || [];
+
 
         var linearOrder =
             this.getLinearOrder(
@@ -1243,9 +1766,11 @@ global.MahouNetworkCalculator = {
                 edges
             );
 
+
         if (!linearOrder) {
             return null;
         }
+
 
         return this.calculateNetwork(
             nodes,
