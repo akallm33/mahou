@@ -1,177 +1,1253 @@
 console.log(
-    "[ModFusion Buildings] Registry script loaded"
+    "[ModFusion Buildings] Registry v2 loading"
 )
+
+
+/*
+ * =========================================================
+ * Schema
+ * =========================================================
+ *
+ * Registry 只负责描述建筑。
+ *
+ * 它不负责：
+ *
+ * - 群系判断
+ * - 候选位置搜索
+ * - 建筑数量分配
+ * - 区块加载
+ * - 实际生成
+ *
+ * 后续模块只能读取这里规范化后的配置，
+ * 不应硬编码某个具体建筑。
+ */
+
+
+var MODFUSION_BUILDING_SCHEMA_VERSION =
+    2
 
 
 var MODFUSION_BUILDING_REGISTRY = {}
 
-
-/*
- * =========================================================
- * Common Twilight Forest biome pool
- * =========================================================
- *
- * 普通暮色森林建筑可以出现在这些群系中。
- *
- * 注意：
- * 这里仅表示“群系资格”，
- * 并不代表所有建筑都会在这些群系中同时生成。
- *
- * 后续由 Building Distributor 决定：
- * 某个 Structure Region 最终分配哪一种建筑。
- */
-
-var MODFUSION_TWILIGHT_COMMON_BIOMES = [
-
-    "mahou:modded/twilightforest/forest",
-
-    "mahou:modded/twilightforest/dense_forest",
-
-    "mahou:modded/twilightforest/firefly_forest",
-
-    "mahou:modded/twilightforest/clearing",
-
-    "mahou:modded/twilightforest/oak_savannah",
-
-    "mahou:modded/twilightforest/mushroom_forest",
-
-    "mahou:modded/twilightforest/dense_mushroom_forest",
-
-    "mahou:modded/twilightforest/spooky_forest"
-]
+var MODFUSION_BUILDING_IDS = []
 
 
-/*
- * =========================================================
- * Registry helpers
- * =========================================================
- */
+var MODFUSION_BUILDING_VALID_LAYERS = {
 
-function registerModfusionBuilding(
-    id,
-    config
-)
-{
-    if(id == null)
-    {
-        console.log(
-            "[ModFusion Buildings] ERROR: building id is null"
-        )
+    "MIDDLE":
+        true,
 
-        return false
-    }
-
-
-    if(config == null)
-    {
-        console.log(
-            "[ModFusion Buildings] ERROR: config is null for " +
-            id
-        )
-
-        return false
-    }
-
-
-    MODFUSION_BUILDING_REGISTRY[id] =
-        config
-
-
-    console.log(
-        "[ModFusion Buildings] Registered: " +
-        id
-    )
-
-
-    return true
+    "HIGH":
+        true
 }
 
 
-function modfusionArrayContains(
-    array,
+var MODFUSION_BUILDING_VALID_ANCHOR_POLICIES = {
+
+    "CANDIDATE_SURFACE":
+        true,
+
+    "FIXED_Y":
+        true
+}
+
+
+var MODFUSION_BUILDING_VALID_ROTATION_POLICIES = {
+
+    "STRUCTURE_DEFAULT":
+        true,
+
+    "NONE":
+        true,
+
+    "RANDOM_90":
+        true
+}
+
+
+var MODFUSION_BUILDING_VALID_RESERVE_POLICIES = {
+
+    "SAME_BUILDING":
+        true,
+
+    "DISABLED":
+        true
+}
+
+
+/*
+ * =========================================================
+ * Basic helpers
+ * =========================================================
+ */
+
+
+function modfusionBuildingFail(
+    message
+)
+{
+    throw new Error(
+        "[ModFusion Buildings] " +
+        message
+    )
+}
+
+
+function modfusionBuildingHasOwn(
+    object,
+    key
+)
+{
+    return Object.prototype
+        .hasOwnProperty
+        .call(
+            object,
+            key
+        )
+}
+
+
+function modfusionBuildingIsObject(
     value
 )
 {
-    if(array == null)
+    return (
+        value != null &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+    )
+}
+
+
+function modfusionBuildingReadObject(
+    value,
+    path,
+    required
+)
+{
+    if(value == null)
     {
-        return false
+        if(required === true)
+        {
+            modfusionBuildingFail(
+                path +
+                " is required"
+            )
+        }
+
+
+        return {}
     }
 
+
+    if(
+        !modfusionBuildingIsObject(
+            value
+        )
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " must be an object"
+        )
+    }
+
+
+    return value
+}
+
+
+function modfusionBuildingReadString(
+    value,
+    path,
+    defaultValue
+)
+{
+    if(value == null)
+    {
+        if(defaultValue != null)
+        {
+            return defaultValue
+        }
+
+
+        modfusionBuildingFail(
+            path +
+            " is required"
+        )
+    }
+
+
+    if(typeof value !== "string")
+    {
+        modfusionBuildingFail(
+            path +
+            " must be a string"
+        )
+    }
+
+
+    var result =
+        String(value).trim()
+
+
+    if(result.length <= 0)
+    {
+        modfusionBuildingFail(
+            path +
+            " cannot be empty"
+        )
+    }
+
+
+    return result
+}
+
+
+function modfusionBuildingReadBoolean(
+    value,
+    path,
+    defaultValue
+)
+{
+    if(value == null)
+    {
+        return defaultValue === true
+    }
+
+
+    if(typeof value !== "boolean")
+    {
+        modfusionBuildingFail(
+            path +
+            " must be a boolean"
+        )
+    }
+
+
+    return value
+}
+
+
+function modfusionBuildingReadInteger(
+    value,
+    path,
+    defaultValue,
+    minimum,
+    maximum
+)
+{
+    if(value == null)
+    {
+        if(defaultValue != null)
+        {
+            return defaultValue
+        }
+
+
+        modfusionBuildingFail(
+            path +
+            " is required"
+        )
+    }
+
+
+    if(
+        typeof value !== "number" ||
+        !isFinite(value) ||
+        Math.floor(value) !== value
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " must be an integer"
+        )
+    }
+
+
+    if(
+        minimum != null &&
+        value < minimum
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " must be >= " +
+            minimum
+        )
+    }
+
+
+    if(
+        maximum != null &&
+        value > maximum
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " must be <= " +
+            maximum
+        )
+    }
+
+
+    return value
+}
+
+
+function modfusionBuildingValidateBuildingId(
+    value,
+    path
+)
+{
+    var result =
+        modfusionBuildingReadString(
+            value,
+            path,
+            null
+        )
+
+
+    if(
+        !/^[a-z0-9_.-]+$/.test(
+            result
+        )
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " is not a valid building id: " +
+            result
+        )
+    }
+
+
+    if(
+        result === "__proto__" ||
+        result === "prototype" ||
+        result === "constructor"
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " uses a reserved name"
+        )
+    }
+
+
+    return result
+}
+
+
+function modfusionBuildingValidateNamespace(
+    value,
+    path
+)
+{
+    var result =
+        modfusionBuildingReadString(
+            value,
+            path,
+            null
+        )
+
+
+    if(
+        !/^[a-z0-9_.-]+$/.test(
+            result
+        )
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " is not a valid namespace: " +
+            result
+        )
+    }
+
+
+    return result
+}
+
+
+function modfusionBuildingValidateResourceId(
+    value,
+    path
+)
+{
+    var result =
+        modfusionBuildingReadString(
+            value,
+            path,
+            null
+        )
+
+
+    if(
+        !/^[a-z0-9_.-]+:[a-z0-9_./-]+$/.test(
+            result
+        )
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " is not a valid resource id: " +
+            result
+        )
+    }
+
+
+    return result
+}
+
+
+function modfusionBuildingReadEnum(
+    value,
+    path,
+    defaultValue,
+    validValues
+)
+{
+    var result =
+        modfusionBuildingReadString(
+            value,
+            path,
+            defaultValue
+        )
+
+
+    if(validValues[result] !== true)
+    {
+        modfusionBuildingFail(
+            path +
+            " has unsupported value: " +
+            result
+        )
+    }
+
+
+    return result
+}
+
+
+function modfusionBuildingReadStringArray(
+    value,
+    path,
+    defaultValue,
+    validValues,
+    allowEmpty
+)
+{
+    var source =
+        value
+
+
+    if(source == null)
+    {
+        source =
+            defaultValue
+    }
+
+
+    if(!Array.isArray(source))
+    {
+        modfusionBuildingFail(
+            path +
+            " must be an array"
+        )
+    }
+
+
+    var result = []
+
+    var seen = {}
 
     var i
 
 
     for(
         i = 0;
-        i < array.length;
+        i < source.length;
         i++
     )
     {
+        var item =
+            modfusionBuildingReadString(
+                source[i],
+                path +
+                "[" +
+                i +
+                "]",
+                null
+            )
+
+
         if(
-            String(array[i]) ===
-            String(value)
+            validValues != null &&
+            validValues[item] !== true
         )
         {
-            return true
+            modfusionBuildingFail(
+                path +
+                " contains unsupported value: " +
+                item
+            )
+        }
+
+
+        var seenKey =
+            "@" +
+            item
+
+
+        if(
+            !modfusionBuildingHasOwn(
+                seen,
+                seenKey
+            )
+        )
+        {
+            seen[seenKey] =
+                true
+
+            result.push(
+                item
+            )
         }
     }
 
 
-    return false
+    if(
+        allowEmpty !== true &&
+        result.length <= 0
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            " cannot be empty"
+        )
+    }
+
+
+    return result
 }
 
 
-function isModfusionBuildingAllowedInBiome(
-    buildingId,
-    biomeId
+function modfusionBuildingGetNamespace(
+    resourceId
 )
 {
-    var config =
-        MODFUSION_BUILDING_REGISTRY[
-            buildingId
-        ]
+    var separator =
+        resourceId.indexOf(":")
 
 
-    if(config == null)
+    if(separator <= 0)
     {
-        return false
+        return null
     }
 
 
-    if(config.enabled === false)
-    {
-        return false
-    }
-
-
-    return modfusionArrayContains(
-        config.allowedBiomes,
-        biomeId
+    return resourceId.substring(
+        0,
+        separator
     )
 }
 
 
-function getModfusionBuildingsForBiome(
-    biomeId
+/*
+ * =========================================================
+ * Section normalization
+ * =========================================================
+ */
+
+
+function normalizeModfusionPlacement(
+    buildingId,
+    value
 )
 {
+    var path =
+        buildingId +
+        ".placement"
+
+
+    var placement =
+        modfusionBuildingReadObject(
+            value,
+            path,
+            true
+        )
+
+
+    var adapterId =
+        modfusionBuildingValidateResourceId(
+            placement.adapterId != null
+                ? placement.adapterId
+                : "mahou:registered_structure",
+            path +
+            ".adapterId"
+        )
+
+
+    var targetId =
+        modfusionBuildingValidateResourceId(
+            placement.targetId,
+            path +
+            ".targetId"
+        )
+
+
+    var anchorPolicy =
+        modfusionBuildingReadEnum(
+            placement.anchorPolicy,
+            path +
+            ".anchorPolicy",
+            "CANDIDATE_SURFACE",
+            MODFUSION_BUILDING_VALID_ANCHOR_POLICIES
+        )
+
+
+    var fixedY =
+        null
+
+
+    if(anchorPolicy === "FIXED_Y")
+    {
+        fixedY =
+            modfusionBuildingReadInteger(
+                placement.fixedY,
+                path +
+                ".fixedY",
+                null,
+                -2048,
+                2048
+            )
+    }
+
+
+    var yOffset =
+        modfusionBuildingReadInteger(
+            placement.yOffset,
+            path +
+            ".yOffset",
+            0,
+            -2048,
+            2048
+        )
+
+
+    var rotationPolicy =
+        modfusionBuildingReadEnum(
+            placement.rotationPolicy,
+            path +
+            ".rotationPolicy",
+            "STRUCTURE_DEFAULT",
+            MODFUSION_BUILDING_VALID_ROTATION_POLICIES
+        )
+
+
+    var options =
+        modfusionBuildingReadObject(
+            placement.options,
+            path +
+            ".options",
+            false
+        )
+
+
+    return {
+
+        adapterId:
+            adapterId,
+
+        targetId:
+            targetId,
+
+        anchorPolicy:
+            anchorPolicy,
+
+        fixedY:
+            fixedY,
+
+        yOffset:
+            yOffset,
+
+        rotationPolicy:
+            rotationPolicy,
+
+        options:
+            options
+    }
+}
+
+
+function normalizeModfusionDistribution(
+    buildingId,
+    value
+)
+{
+    var path =
+        buildingId +
+        ".distribution"
+
+
+    var distribution =
+        modfusionBuildingReadObject(
+            value,
+            path,
+            true
+        )
+
+
+    var poolId =
+        modfusionBuildingValidateResourceId(
+            distribution.poolId,
+            path +
+            ".poolId"
+        )
+
+
+    var weight =
+        modfusionBuildingReadInteger(
+            distribution.weight,
+            path +
+            ".weight",
+            1,
+            1,
+            1000000
+        )
+
+
+    var unique =
+        modfusionBuildingReadBoolean(
+            distribution.unique,
+            path +
+            ".unique",
+            false
+        )
+
+
+    var reservePolicy =
+        modfusionBuildingReadEnum(
+            distribution.reservePolicy,
+            path +
+            ".reservePolicy",
+            "SAME_BUILDING",
+            MODFUSION_BUILDING_VALID_RESERVE_POLICIES
+        )
+
+
+    return {
+
+        poolId:
+            poolId,
+
+        weight:
+            weight,
+
+        unique:
+            unique,
+
+        reservePolicy:
+            reservePolicy
+    }
+}
+
+
+function normalizeModfusionTerrain(
+    buildingId,
+    value
+)
+{
+    var path =
+        buildingId +
+        ".terrain"
+
+
+    var terrain =
+        modfusionBuildingReadObject(
+            value,
+            path,
+            true
+        )
+
+
+    var analyzerId =
+        modfusionBuildingValidateResourceId(
+            terrain.analyzerId != null
+                ? terrain.analyzerId
+                : "mahou:floating_island_surface",
+            path +
+            ".analyzerId"
+        )
+
+
+    var allowedLayers =
+        modfusionBuildingReadStringArray(
+            terrain.allowedLayers,
+            path +
+            ".allowedLayers",
+            [
+                "MIDDLE",
+                "HIGH"
+            ],
+            MODFUSION_BUILDING_VALID_LAYERS,
+            false
+        )
+
+
+    var foundationRadius =
+        modfusionBuildingReadInteger(
+            terrain.foundationRadius,
+            path +
+            ".foundationRadius",
+            null,
+            0,
+            512
+        )
+
+
+    var minFoundationPoints =
+        modfusionBuildingReadInteger(
+            terrain.minFoundationPoints,
+            path +
+            ".minFoundationPoints",
+            null,
+            1,
+            9
+        )
+
+
+    var reliefSampleRadius =
+        modfusionBuildingReadInteger(
+            terrain.reliefSampleRadius,
+            path +
+            ".reliefSampleRadius",
+            null,
+            0,
+            1024
+        )
+
+
+    if(
+        reliefSampleRadius <
+        foundationRadius
+    )
+    {
+        modfusionBuildingFail(
+            path +
+            ".reliefSampleRadius cannot be smaller than " +
+            path +
+            ".foundationRadius"
+        )
+    }
+
+
+    var maxHeightDifference =
+        modfusionBuildingReadInteger(
+            terrain.maxHeightDifference,
+            path +
+            ".maxHeightDifference",
+            null,
+            0,
+            384
+        )
+
+
+    var options =
+        modfusionBuildingReadObject(
+            terrain.options,
+            path +
+            ".options",
+            false
+        )
+
+
+    return {
+
+        analyzerId:
+            analyzerId,
+
+        allowedLayers:
+            allowedLayers,
+
+        foundationRadius:
+            foundationRadius,
+
+        minFoundationPoints:
+            minFoundationPoints,
+
+        reliefSampleRadius:
+            reliefSampleRadius,
+
+        maxHeightDifference:
+            maxHeightDifference,
+
+        options:
+            options
+    }
+}
+
+
+function normalizeModfusionSpacing(
+    buildingId,
+    value
+)
+{
+    var path =
+        buildingId +
+        ".spacing"
+
+
+    var spacing =
+        modfusionBuildingReadObject(
+            value,
+            path,
+            true
+        )
+
+
+    var ruleId =
+        modfusionBuildingValidateResourceId(
+            spacing.ruleId != null
+                ? spacing.ruleId
+                : "mahou:global_radius",
+            path +
+            ".ruleId"
+        )
+
+
+    var minDistance =
+        modfusionBuildingReadInteger(
+            spacing.minDistance,
+            path +
+            ".minDistance",
+            null,
+            0,
+            10000000
+        )
+
+
+    var options =
+        modfusionBuildingReadObject(
+            spacing.options,
+            path +
+            ".options",
+            false
+        )
+
+
+    return {
+
+        ruleId:
+            ruleId,
+
+        minDistance:
+            minDistance,
+
+        options:
+            options
+    }
+}
+
+
+/*
+ * =========================================================
+ * Complete building normalization
+ * =========================================================
+ */
+
+
+function normalizeModfusionBuilding(
+    buildingId,
+    config
+)
+{
+    var path =
+        "building[" +
+        buildingId +
+        "]"
+
+
+    var source =
+        modfusionBuildingReadObject(
+            config,
+            path,
+            true
+        )
+
+
+    var enabled =
+        modfusionBuildingReadBoolean(
+            source.enabled,
+            path +
+            ".enabled",
+            true
+        )
+
+
+    var displayName =
+        modfusionBuildingReadString(
+            source.displayName,
+            path +
+            ".displayName",
+            buildingId
+        )
+
+
+    var placement =
+        normalizeModfusionPlacement(
+            buildingId,
+            source.placement
+        )
+
+
+    var sourceModDefault =
+        modfusionBuildingGetNamespace(
+            placement.targetId
+        )
+
+
+    var sourceMod =
+        modfusionBuildingValidateNamespace(
+            source.sourceMod != null
+                ? source.sourceMod
+                : sourceModDefault,
+            path +
+            ".sourceMod"
+        )
+
+
+    var distribution =
+        normalizeModfusionDistribution(
+            buildingId,
+            source.distribution
+        )
+
+
+    var terrain =
+        normalizeModfusionTerrain(
+            buildingId,
+            source.terrain
+        )
+
+
+    var spacing =
+        normalizeModfusionSpacing(
+            buildingId,
+            source.spacing
+        )
+
+
+    var tags =
+        modfusionBuildingReadStringArray(
+            source.tags,
+            path +
+            ".tags",
+            [],
+            null,
+            true
+        )
+
+
+    return {
+
+        schemaVersion:
+            MODFUSION_BUILDING_SCHEMA_VERSION,
+
+        id:
+            buildingId,
+
+        enabled:
+            enabled,
+
+        displayName:
+            displayName,
+
+        sourceMod:
+            sourceMod,
+
+        placement:
+            placement,
+
+        distribution:
+            distribution,
+
+        terrain:
+            terrain,
+
+        spacing:
+            spacing,
+
+        tags:
+            tags
+    }
+}
+
+
+/*
+ * =========================================================
+ * Registry operations
+ * =========================================================
+ */
+
+
+function registerModfusionBuilding(
+    buildingId,
+    config
+)
+{
+    var normalizedId =
+        modfusionBuildingValidateBuildingId(
+            buildingId,
+            "buildingId"
+        )
+
+
+    if(
+        modfusionBuildingHasOwn(
+            MODFUSION_BUILDING_REGISTRY,
+            normalizedId
+        )
+    )
+    {
+        modfusionBuildingFail(
+            "Duplicate building registration: " +
+            normalizedId
+        )
+    }
+
+
+    var normalized =
+        normalizeModfusionBuilding(
+            normalizedId,
+            config
+        )
+
+
+    MODFUSION_BUILDING_REGISTRY[
+        normalizedId
+    ] = normalized
+
+
+    MODFUSION_BUILDING_IDS.push(
+        normalizedId
+    )
+
+
+    console.log(
+        "[ModFusion Buildings] Registered: " +
+        normalizedId +
+        " -> " +
+        normalized.placement.targetId
+    )
+
+
+    return normalized
+}
+
+
+function hasModfusionBuilding(
+    buildingId
+)
+{
+    if(buildingId == null)
+    {
+        return false
+    }
+
+
+    return modfusionBuildingHasOwn(
+        MODFUSION_BUILDING_REGISTRY,
+        String(buildingId)
+    )
+}
+
+
+function getModfusionBuilding(
+    buildingId
+)
+{
+    if(
+        !hasModfusionBuilding(
+            buildingId
+        )
+    )
+    {
+        return null
+    }
+
+
+    return MODFUSION_BUILDING_REGISTRY[
+        String(buildingId)
+    ]
+}
+
+
+function getModfusionBuildingIds()
+{
+    var result =
+        MODFUSION_BUILDING_IDS.slice(0)
+
+
+    result.sort()
+
+
+    return result
+}
+
+
+function getAllModfusionBuildings()
+{
+    var ids =
+        getModfusionBuildingIds()
+
+
     var result = []
 
-    var id
+    var i
 
 
     for(
-        id in MODFUSION_BUILDING_REGISTRY
+        i = 0;
+        i < ids.length;
+        i++
     )
     {
-        if(
-            isModfusionBuildingAllowedInBiome(
-                id,
-                biomeId
-            )
+        result.push(
+            MODFUSION_BUILDING_REGISTRY[
+                ids[i]
+            ]
         )
+    }
+
+
+    return result
+}
+
+
+function getEnabledModfusionBuildings()
+{
+    var all =
+        getAllModfusionBuildings()
+
+
+    var result = []
+
+    var i
+
+
+    for(
+        i = 0;
+        i < all.length;
+        i++
+    )
+    {
+        if(all[i].enabled === true)
         {
-            result.push(id)
+            result.push(
+                all[i]
+            )
         }
     }
 
@@ -180,556 +1256,697 @@ function getModfusionBuildingsForBiome(
 }
 
 
-function getModfusionBuilding(
-    buildingId
+function getModfusionBuildingsByPool(
+    poolId
 )
 {
-    var config =
-        MODFUSION_BUILDING_REGISTRY[
-            buildingId
-        ]
+    var normalizedPoolId =
+        modfusionBuildingValidateResourceId(
+            poolId,
+            "poolId"
+        )
 
 
-    if(config == null)
+    var all =
+        getEnabledModfusionBuildings()
+
+
+    var result = []
+
+    var i
+
+
+    for(
+        i = 0;
+        i < all.length;
+        i++
+    )
     {
-        return null
+        if(
+            all[i]
+                .distribution
+                .poolId ===
+            normalizedPoolId
+        )
+        {
+            result.push(
+                all[i]
+            )
+        }
     }
 
 
-    return config
+    return result
+}
+
+
+function getModfusionBuildingsBySourceMod(
+    sourceMod
+)
+{
+    var normalizedSourceMod =
+        modfusionBuildingValidateNamespace(
+            sourceMod,
+            "sourceMod"
+        )
+
+
+    var all =
+        getEnabledModfusionBuildings()
+
+
+    var result = []
+
+    var i
+
+
+    for(
+        i = 0;
+        i < all.length;
+        i++
+    )
+    {
+        if(
+            all[i].sourceMod ===
+            normalizedSourceMod
+        )
+        {
+            result.push(
+                all[i]
+            )
+        }
+    }
+
+
+    return result
+}
+
+
+function getModfusionBuildingsByTag(
+    tag
+)
+{
+    var normalizedTag =
+        modfusionBuildingReadString(
+            tag,
+            "tag",
+            null
+        )
+
+
+    var all =
+        getEnabledModfusionBuildings()
+
+
+    var result = []
+
+    var i
+    var j
+
+
+    for(
+        i = 0;
+        i < all.length;
+        i++
+    )
+    {
+        for(
+            j = 0;
+            j < all[i].tags.length;
+            j++
+        )
+        {
+            if(
+                all[i].tags[j] ===
+                normalizedTag
+            )
+            {
+                result.push(
+                    all[i]
+                )
+
+                break
+            }
+        }
+    }
+
+
+    return result
+}
+
+
+function forEachModfusionBuilding(
+    callback
+)
+{
+    if(typeof callback !== "function")
+    {
+        modfusionBuildingFail(
+            "forEach callback must be a function"
+        )
+    }
+
+
+    var all =
+        getAllModfusionBuildings()
+
+
+    var i
+
+
+    for(
+        i = 0;
+        i < all.length;
+        i++
+    )
+    {
+        callback(
+            all[i],
+            all[i].id
+        )
+    }
+}
+
+
+function getModfusionBuildingCount()
+{
+    return MODFUSION_BUILDING_IDS.length
 }
 
 
 /*
  * =========================================================
- * Twilight Forest COMMON structures
+ * Twilight Forest: common buildings
  * =========================================================
  */
 
-
-/*
- * ---------------------------------------------------------
- * Naga Courtyard
- * ---------------------------------------------------------
- *
- * 官方庭院主体约 44 x 44。
- *
- * foundationRadius = 22
- *
- * Analyzer 会检测：
- *
- * 中心
- * 四个方向
- * 四个角
- *
- * 共 9 点。
- *
- * 至少 7 点拥有稳定岛面才通过。
- */
 
 registerModfusionBuilding(
     "twilight_naga_courtyard",
     {
-        structureId:
-            "twilightforest:naga_courtyard",
+        displayName:
+            "Twilight Forest Naga Courtyard",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes:
-            MODFUSION_TWILIGHT_COMMON_BIOMES,
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "COMMON",
+            targetId:
+                "twilightforest:naga_courtyard"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_common",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            48,
+        terrain: {
+            foundationRadius:
+                22,
 
-        minBiomeCoverage:
-            0.65,
+            minFoundationPoints:
+                7,
 
+            reliefSampleRadius:
+                32,
 
-        foundationRadius:
-            22,
+            maxHeightDifference:
+                12
+        },
 
-        minFoundationPoints:
-            7,
+        spacing: {
+            minDistance:
+                768
+        },
 
-
-        terrainSampleRadius:
-            32,
-
-        maxHeightDifference:
-            12,
-
-
-        minStructureSpacing:
-            768
+        tags: [
+            "twilightforest",
+            "common",
+            "boss"
+        ]
     }
 )
 
-
-/*
- * ---------------------------------------------------------
- * Lich Tower
- * ---------------------------------------------------------
- *
- * 主塔核心约 15 x 15。
- *
- * foundationRadius = 8
- */
 
 registerModfusionBuilding(
     "twilight_lich_tower",
     {
-        structureId:
-            "twilightforest:lich_tower",
+        displayName:
+            "Twilight Forest Lich Tower",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes:
-            MODFUSION_TWILIGHT_COMMON_BIOMES,
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "COMMON",
+            targetId:
+                "twilightforest:lich_tower"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_common",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            48,
+        terrain: {
+            foundationRadius:
+                8,
 
-        minBiomeCoverage:
-            0.65,
+            minFoundationPoints:
+                7,
 
+            reliefSampleRadius:
+                24,
 
-        foundationRadius:
-            8,
+            maxHeightDifference:
+                12
+        },
 
-        minFoundationPoints:
-            7,
+        spacing: {
+            minDistance:
+                768
+        },
 
-
-        terrainSampleRadius:
-            24,
-
-        maxHeightDifference:
-            12,
-
-
-        minStructureSpacing:
-            768
+        tags: [
+            "twilightforest",
+            "common",
+            "boss"
+        ]
     }
 )
 
 
 /*
  * =========================================================
- * Twilight Forest DEDICATED structures
+ * Twilight Forest: dedicated buildings
  * =========================================================
  */
 
-
-/*
- * ---------------------------------------------------------
- * Labyrinth
- * ---------------------------------------------------------
- */
 
 registerModfusionBuilding(
     "twilight_labyrinth",
     {
-        structureId:
-            "twilightforest:labyrinth",
+        displayName:
+            "Twilight Forest Labyrinth",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes: [
-            "mahou:modded/twilightforest/swamp"
-        ],
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "DEDICATED",
+            targetId:
+                "twilightforest:labyrinth"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_dedicated",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            64,
+        terrain: {
+            foundationRadius:
+                24,
 
-        minBiomeCoverage:
-            0.80,
+            minFoundationPoints:
+                7,
 
+            reliefSampleRadius:
+                32,
 
-        foundationRadius:
-            24,
+            maxHeightDifference:
+                12
+        },
 
-        minFoundationPoints:
-            7,
+        spacing: {
+            minDistance:
+                1024
+        },
 
-
-        terrainSampleRadius:
-            32,
-
-        maxHeightDifference:
-            12,
-
-
-        minStructureSpacing:
-            1024
+        tags: [
+            "twilightforest",
+            "dedicated",
+            "boss"
+        ]
     }
 )
 
-
-/*
- * ---------------------------------------------------------
- * Hydra Lair
- * ---------------------------------------------------------
- */
 
 registerModfusionBuilding(
     "twilight_hydra_lair",
     {
-        structureId:
-            "twilightforest:hydra_lair",
+        displayName:
+            "Twilight Forest Hydra Lair",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes: [
-            "mahou:modded/twilightforest/fire_swamp"
-        ],
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "DEDICATED",
+            targetId:
+                "twilightforest:hydra_lair"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_dedicated",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            64,
+        terrain: {
+            foundationRadius:
+                20,
 
-        minBiomeCoverage:
-            0.80,
+            minFoundationPoints:
+                6,
 
+            reliefSampleRadius:
+                32,
 
-        foundationRadius:
-            20,
+            maxHeightDifference:
+                14
+        },
 
-        minFoundationPoints:
-            6,
+        spacing: {
+            minDistance:
+                1024
+        },
 
-
-        terrainSampleRadius:
-            32,
-
-        maxHeightDifference:
-            14,
-
-
-        minStructureSpacing:
-            1024
+        tags: [
+            "twilightforest",
+            "dedicated",
+            "boss"
+        ]
     }
 )
 
-
-/*
- * ---------------------------------------------------------
- * Knight Stronghold
- * ---------------------------------------------------------
- */
 
 registerModfusionBuilding(
     "twilight_knight_stronghold",
     {
-        structureId:
-            "twilightforest:knight_stronghold",
+        displayName:
+            "Twilight Forest Knight Stronghold",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes: [
-            "mahou:modded/twilightforest/dark_forest"
-        ],
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "DEDICATED",
+            targetId:
+                "twilightforest:knight_stronghold"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_dedicated",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            64,
+        terrain: {
+            foundationRadius:
+                20,
 
-        minBiomeCoverage:
-            0.80,
+            minFoundationPoints:
+                6,
 
+            reliefSampleRadius:
+                32,
 
-        foundationRadius:
-            20,
+            maxHeightDifference:
+                14
+        },
 
-        minFoundationPoints:
-            6,
+        spacing: {
+            minDistance:
+                1024
+        },
 
-
-        terrainSampleRadius:
-            32,
-
-        maxHeightDifference:
-            14,
-
-
-        minStructureSpacing:
-            1024
+        tags: [
+            "twilightforest",
+            "dedicated",
+            "boss"
+        ]
     }
 )
 
-
-/*
- * ---------------------------------------------------------
- * Yeti Cave
- * ---------------------------------------------------------
- */
 
 registerModfusionBuilding(
     "twilight_yeti_cave",
     {
-        structureId:
-            "twilightforest:yeti_cave",
+        displayName:
+            "Twilight Forest Yeti Cave",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes: [
-            "mahou:modded/twilightforest/snowy_forest"
-        ],
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "DEDICATED",
+            targetId:
+                "twilightforest:yeti_cave"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_dedicated",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            64,
+        terrain: {
+            foundationRadius:
+                20,
 
-        minBiomeCoverage:
-            0.80,
+            minFoundationPoints:
+                6,
 
+            reliefSampleRadius:
+                32,
 
-        foundationRadius:
-            20,
+            maxHeightDifference:
+                14
+        },
 
-        minFoundationPoints:
-            6,
+        spacing: {
+            minDistance:
+                1024
+        },
 
-
-        terrainSampleRadius:
-            32,
-
-        maxHeightDifference:
-            14,
-
-
-        minStructureSpacing:
-            1024
+        tags: [
+            "twilightforest",
+            "dedicated",
+            "boss"
+        ]
     }
 )
 
-
-/*
- * ---------------------------------------------------------
- * Aurora Palace
- * ---------------------------------------------------------
- *
- * biomeSampleRadius 很大：
- * 用于判断这里是不是足够大的 Glacier Boss Region。
- *
- * foundationRadius 则小很多：
- * 只判断冰塔真正需要站立的核心区域。
- *
- * 两者必须分开。
- */
 
 registerModfusionBuilding(
     "twilight_aurora_palace",
     {
-        structureId:
-            "twilightforest:aurora_palace",
+        displayName:
+            "Twilight Forest Aurora Palace",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes: [
-            "mahou:modded/twilightforest/glacier"
-        ],
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "DEDICATED",
+            targetId:
+                "twilightforest:aurora_palace"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_dedicated",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            96,
+        terrain: {
+            foundationRadius:
+                16,
 
-        minBiomeCoverage:
-            0.85,
+            minFoundationPoints:
+                5,
 
+            reliefSampleRadius:
+                40,
 
-        foundationRadius:
-            16,
+            maxHeightDifference:
+                12
+        },
 
-        minFoundationPoints:
-            5,
+        spacing: {
+            minDistance:
+                1536
+        },
 
-
-        terrainSampleRadius:
-            40,
-
-        maxHeightDifference:
-            12,
-
-
-        minStructureSpacing:
-            1536
+        tags: [
+            "twilightforest",
+            "dedicated",
+            "boss"
+        ]
     }
 )
 
-
-/*
- * ---------------------------------------------------------
- * Troll Cave
- * ---------------------------------------------------------
- */
 
 registerModfusionBuilding(
     "twilight_troll_cave",
     {
-        structureId:
-            "twilightforest:troll_cave",
+        displayName:
+            "Twilight Forest Troll Cave",
 
-        placementType:
-            "structure",
+        sourceMod:
+            "twilightforest",
 
-        allowedBiomes: [
-            "mahou:modded/twilightforest/highlands"
-        ],
+        placement: {
+            adapterId:
+                "mahou:registered_structure",
 
-        regionPolicy:
-            "DEDICATED",
+            targetId:
+                "twilightforest:troll_cave"
+        },
 
-        unique:
-            false,
+        distribution: {
+            poolId:
+                "mahou:twilight_dedicated",
 
-        enabled:
-            true,
+            weight:
+                1,
 
+            reservePolicy:
+                "SAME_BUILDING"
+        },
 
-        biomeSampleRadius:
-            64,
+        terrain: {
+            foundationRadius:
+                20,
 
-        minBiomeCoverage:
-            0.80,
+            minFoundationPoints:
+                6,
 
+            reliefSampleRadius:
+                32,
 
-        foundationRadius:
-            20,
+            maxHeightDifference:
+                14
+        },
 
-        minFoundationPoints:
-            6,
+        spacing: {
+            minDistance:
+                1024
+        },
 
-
-        terrainSampleRadius:
-            32,
-
-        maxHeightDifference:
-            14,
-
-
-        minStructureSpacing:
-            1024
+        tags: [
+            "twilightforest",
+            "dedicated",
+            "boss"
+        ]
     }
 )
-
-
-/*
- * =========================================================
- * Future special-region structures
- * =========================================================
- *
- * 暂时不注册：
- *
- * Dark Tower
- * Final Castle
- *
- * 因为其对应的：
- *
- * dark_forest_center
- * final_plateau
- *
- * 以后由 Boss Region 系统专门生成。
- */
 
 
 /*
  * =========================================================
  * Public API
  * =========================================================
+ *
+ * 不暴露内部 registry 对象，避免其他模块直接修改配置。
  */
+
 
 global.ModfusionBuildingRegistry = {
 
-    get:
-        getModfusionBuilding,
-
-    getForBiome:
-        getModfusionBuildingsForBiome,
-
-    isAllowedInBiome:
-        isModfusionBuildingAllowedInBiome,
+    schemaVersion:
+        MODFUSION_BUILDING_SCHEMA_VERSION,
 
     register:
         registerModfusionBuilding,
 
-    all:
-        MODFUSION_BUILDING_REGISTRY
+    has:
+        hasModfusionBuilding,
+
+    get:
+        getModfusionBuilding,
+
+    getIds:
+        getModfusionBuildingIds,
+
+    getAll:
+        getAllModfusionBuildings,
+
+    getEnabled:
+        getEnabledModfusionBuildings,
+
+    getByPool:
+        getModfusionBuildingsByPool,
+
+    getBySourceMod:
+        getModfusionBuildingsBySourceMod,
+
+    getByTag:
+        getModfusionBuildingsByTag,
+
+    forEach:
+        forEachModfusionBuilding,
+
+    size:
+        getModfusionBuildingCount
 }
 
 
 console.log(
-    "[ModFusion Buildings] Registry ready."
+    "[ModFusion Buildings] Registry v2 ready. " +
+    "Registered buildings: " +
+    getModfusionBuildingCount()
 )

@@ -7,11 +7,11 @@
     "argument1": {
       "type": "minecraft:noise",
       "noise": "mahou:high_island_distribution",
-      "xz_scale": 1.20,
+      "xz_scale": 1.30,
       "y_scale": 0.0
     },
 
-    "argument2": -0.28
+    "argument2": -0.45
   },
 
   "argument2": {
@@ -20,10 +20,10 @@
     "argument1": {
       "type": "minecraft:noise",
       "noise": "mahou:high_island_mask",
-      "xz_scale": 0.18,
+      "xz_scale": 0.20,
       "y_scale": 0.0
     },
 
-    "argument2": -0.46
+    "argument2": -0.45
   }
 }
