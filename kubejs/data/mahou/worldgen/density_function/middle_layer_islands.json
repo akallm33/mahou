@@ -2,48 +2,46 @@
   "type": "minecraft:min",
 
   "argument1": {
-    "type": "minecraft:add",
-
-    "argument1": "mahou:middle_xz_field",
-
-    "argument2": {
-      "type": "minecraft:min",
-
-      "argument1": {
-        "type": "minecraft:y_clamped_gradient",
-        "from_y": 0,
-        "to_y": 64,
-        "from_value": -0.90,
-        "to_value": 0.0
-      },
-
-      "argument2": {
-        "type": "minecraft:y_clamped_gradient",
-        "from_y": 64,
-        "to_y": 88,
-        "from_value": 0.0,
-        "to_value": -0.90
-      }
-    }
-  },
-
-  "argument2": {
     "type": "minecraft:min",
 
     "argument1": {
+      "type": "minecraft:add",
+
+      "argument1": "mahou:middle_xz_field",
+
+      "argument2": {
+        "type": "minecraft:y_clamped_gradient",
+        "from_y": 0,
+        "to_y": 64,
+        "from_value": -2.6666666667,
+        "to_value": 0.0
+      }
+    },
+
+    "argument2": "mahou:middle_grid_bottom_cutoff"
+  },
+
+  "argument2": {
+    "type": "minecraft:add",
+
+    "argument1": {
       "type": "minecraft:y_clamped_gradient",
-      "from_y": 0,
-      "to_y": 20,
-      "from_value": -1.0,
-      "to_value": 1.0
+      "from_y": 65,
+      "to_y": 81,
+      "from_value": 1.0,
+      "to_value": -1.0
     },
 
     "argument2": {
-      "type": "minecraft:y_clamped_gradient",
-      "from_y": 70,
-      "to_y": 90,
-      "from_value": 1.0,
-      "to_value": -1.0
+      "type": "minecraft:add",
+
+      "argument1": {
+        "type": "minecraft:min",
+        "argument1": "mahou:middle_xz_field",
+        "argument2": 1.0
+      },
+
+      "argument2": -1.0
     }
   }
 }

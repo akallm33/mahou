@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "moredfs:sqrt",
+    "argument": {
+      "type": "minecraft:add",
+      "argument1": {
+        "type": "minecraft:mul",
+        "argument1": "mahou:middle_grid_local_x",
+        "argument2": "mahou:middle_grid_local_x"
+      },
+      "argument2": {
+        "type": "minecraft:mul",
+        "argument1": "mahou:middle_grid_local_z",
+        "argument2": "mahou:middle_grid_local_z"
+      }
+    }
+  }
+}

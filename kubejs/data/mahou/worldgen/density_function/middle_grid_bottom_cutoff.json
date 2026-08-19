@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:mul",
+
+  "argument1": {
+    "type": "minecraft:add",
+
+    "argument1": {
+      "type": "minecraft:add",
+
+      "argument1": {
+        "type": "moredfs:y"
+      },
+
+      "argument2": -24.0
+    },
+
+    "argument2": {
+      "type": "minecraft:mul",
+      "argument1": "mahou:middle_grid_bottom_noise",
+      "argument2": -1.0
+    }
+  },
+
+  "argument2": 0.25
+}

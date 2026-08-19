@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:add",
+
+  "argument1": {
+    "type": "moredfs:floor_mod",
+
+    "numerator": {
+      "type": "minecraft:add",
+
+      "argument1": {
+        "type": "moredfs:x"
+      },
+
+      "argument2": 256.0
+    },
+
+    "denominator": 512.0
+  },
+
+  "argument2": -256.0
+}

@@ -1,0 +1,46 @@
+{
+  "type": "minecraft:cache_2d",
+
+  "argument": {
+    "type": "minecraft:mul",
+
+    "argument1": {
+      "type": "minecraft:clamp",
+
+      "input": {
+        "type": "minecraft:add",
+
+        "argument1": {
+          "type": "minecraft:mul",
+
+          "argument1": {
+            "type": "minecraft:noise",
+            "noise": "mahou:middle_island_distribution",
+            "xz_scale": 0.25,
+            "y_scale": 0.0
+          },
+
+          "argument2": 15.0
+        },
+
+        "argument2": {
+          "type": "minecraft:mul",
+
+          "argument1": {
+            "type": "minecraft:noise",
+            "noise": "mahou:middle_island_mask",
+            "xz_scale": 0.85,
+            "y_scale": 0.0
+          },
+
+          "argument2": 7.0
+        }
+      },
+
+      "min": -16.0,
+      "max": 16.0
+    },
+
+    "argument2": "mahou:middle_grid_edge_weight"
+  }
+}

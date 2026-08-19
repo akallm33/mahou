@@ -1,0 +1,17 @@
+{
+  "type": "moredfs:sqrt",
+
+  "argument": {
+    "type": "minecraft:add",
+
+    "argument1": {
+      "type": "minecraft:square",
+      "argument": "mahou:middle_grid_local_x"
+    },
+
+    "argument2": {
+      "type": "minecraft:square",
+      "argument": "mahou:middle_grid_local_z"
+    }
+  }
+}
