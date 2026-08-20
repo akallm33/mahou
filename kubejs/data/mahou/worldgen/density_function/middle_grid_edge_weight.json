@@ -7,10 +7,10 @@
     "argument1": {
       "type": "minecraft:add",
       "argument1": "mahou:middle_grid_nearest_distance",
-      "argument2": -96.0
+      "argument2": -140.0
     },
 
-    "argument2": 0.020833333333333332
+    "argument2": 0.025
   },
 
   "min": 0.0,

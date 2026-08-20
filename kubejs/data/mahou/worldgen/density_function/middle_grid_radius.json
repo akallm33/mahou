@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "minecraft:add",
+    "argument1": 150.0,
+    "argument2": {
+      "type": "minecraft:mul",
+      "argument1": "mahou:middle_grid_random",
+      "argument2": 80.0
+    }
+  }
+}

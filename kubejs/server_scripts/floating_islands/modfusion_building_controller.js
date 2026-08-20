@@ -1,84 +1,70 @@
-console.log("[ModFusion Controller] Controller v3 loading")
+console.log("[ModFusion Building Controller] Controller v2 loading")
 
 
 /*
  * =========================================================
- * ModFusion Building Controller v3
+ * ModFusion Building Controller v1
  * =========================================================
  *
- * This is the only automatic orchestration module.
+ * Connects the pure Registry/Planner modules to the Generation adapter.
  *
- * Responsibilities:
- *   - notice when a player enters a new distribution cell;
- *   - enqueue that cell once;
- *   - resolve candidates gradually;
- *   - preload placement chunks gradually;
- *   - call Generation only after Analyzer passes;
- *   - write terminal cell state to level.persistentData;
- *   - prevent duplicate generation.
- *
- * It does not scan the whole world. Player tick only performs a small
- * interval/cell-change check. Expensive work is performed by a bounded,
- * single-job queue.
+ * Safety rules:
+ *   - only the cell occupied by a player is considered;
+ *   - no terrain scan and no getChunk() call is performed;
+ *   - the complete planned footprint must already be loaded;
+ *   - a persistent PLACING state is written before structure blocks run;
+ *   - terminal states prevent duplicate placement after a restart;
+ *   - failed or interrupted cells require an explicit administrator retry.
  */
 
 
-var MODFUSION_CONTROLLER_SCHEMA_VERSION = 3
-var MODFUSION_CONTROLLER_DIMENSION_ID = "mahou:modfusion_dimension"
+var MODFUSION_BUILDING_CONTROLLER_SCHEMA_VERSION = 1
+var MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID =
+    "mahou:modfusion_dimension"
 
+var MODFUSION_BUILDING_CONTROLLER_STATE_PREFIX =
+    "mahouModfusionBuildingControllerV1"
 
-var MODFUSION_CONTROLLER_CONFIG = {
+var MODFUSION_BUILDING_CONTROLLER_CONFIG = {
     enabled: true,
 
-    /* Check player cell changes every two seconds. */
     playerScanIntervalTicks: 40,
-
-    /* Process at most one queue step per server tick. */
     workerIntervalTicks: 1,
-
-    /* Incremental structure-area preloading. */
-    chunksPerWorkerStep: 2,
-    placementPreloadRadiusChunks: 3,
-
     maxQueueSize: 64,
 
-    /*
-     * Safety guard.
-     *
-     * Twilight Forest registered structures may recalculate their own Y.
-     * Keep this false until their height behavior is accepted or replaced
-     * by an exact-Y adapter.
-     */
-    allowInexactYAdapters: false,
+    planningWarningMillis: 100,
+    maximumPlanningMillis: 2000,
 
-    /* The origin cell belongs to the ModFusion spawn structure. */
-    reservedCells: {
-        "0:0": true
-    }
+    maximumFootprintRadiusChunks: 32
 }
 
 
-var MODFUSION_CONTROLLER_STATE_PREFIX =
-    "mahouModfusionBuildingControllerV6"
+var MODFUSION_CONTROLLER_ResourceLocation = Java.loadClass(
+    "net.minecraft.resources.ResourceLocation"
+)
+
+var MODFUSION_CONTROLLER_MDF_SEED_HOLDER_CLASS_NAME =
+    "com.klinbee.moredensityfunctions.randomsamplers." +
+    "RandomSampler$WorldSeedHolder"
 
 
-var MODFUSION_CONTROLLER_TERMINAL_STATES = {
-    "RESERVED": true,
-    "GENERATED": true,
-    "NO_VALID_SITE": true,
-    "PLACE_FAILED": true
+var MODFUSION_BUILDING_CONTROLLER_QUEUE = []
+var MODFUSION_BUILDING_CONTROLLER_QUEUED = Object.create(null)
+var MODFUSION_BUILDING_CONTROLLER_ACTIVE = null
+var MODFUSION_BUILDING_CONTROLLER_TICK = 0
+var MODFUSION_BUILDING_CONTROLLER_EXACT_SEED_TEXT = null
+
+
+var MODFUSION_BUILDING_CONTROLLER_TERMINAL_STATES = {
+    RESERVED: true,
+    SKIPPED: true,
+    GENERATED: true,
+    PLACING: true,
+    FAILED: true
 }
 
 
-var MODFUSION_CONTROLLER_QUEUE = []
-var MODFUSION_CONTROLLER_QUEUED_CELLS = Object.create(null)
-var MODFUSION_CONTROLLER_ACTIVE_JOB = null
-var MODFUSION_CONTROLLER_PLAYER_CELLS = Object.create(null)
-var MODFUSION_CONTROLLER_SESSION_BLOCKED = Object.create(null)
-var MODFUSION_CONTROLLER_TICK = 0
-
-
-var MODFUSION_CONTROLLER_STATE_FIELDS = [
+var MODFUSION_BUILDING_CONTROLLER_STATE_FIELDS = [
     "status",
     "reason",
     "buildingId",
@@ -87,17 +73,17 @@ var MODFUSION_CONTROLLER_STATE_FIELDS = [
     "x",
     "y",
     "z",
-    "attempt",
-    "updatedTick",
-    "exactY"
+    "exactY",
+    "updatedTick"
 ]
 
 
 /*
  * =========================================================
- * Basic helpers
+ * General helpers
  * =========================================================
  */
+
 
 function modfusionControllerHasOwn(object, key)
 {
@@ -105,22 +91,16 @@ function modfusionControllerHasOwn(object, key)
 }
 
 
-function modfusionControllerIsObject(value)
-{
-    return value != null && typeof value === "object" && !Array.isArray(value)
-}
-
-
 function modfusionControllerReadInteger(value)
 {
     var number = Number(value)
 
-    if(!isFinite(number))
+    if(!isFinite(number) || Math.floor(number) !== number)
     {
         return null
     }
 
-    return Math.floor(number)
+    return number
 }
 
 
@@ -151,61 +131,107 @@ function modfusionControllerIsClientLevel(level)
 
     try
     {
-        if(typeof level.isClientSide === "function")
-        {
-            return level.isClientSide()
-        }
+        return level.isClientSide() === true
     }
     catch(error1)
     {
-        /* Try the property form. */
-    }
-
-    try
-    {
-        return level.clientSide === true
-    }
-    catch(error2)
-    {
-        return false
+        try
+        {
+            return level.isClientSide === true
+        }
+        catch(error2)
+        {
+            return true
+        }
     }
 }
 
 
-function modfusionControllerGetPlayerKey(player)
+function modfusionControllerGetLevel(server)
 {
-    if(player == null)
+    if(server == null)
+    {
+        return null
+    }
+
+    var location = MODFUSION_CONTROLLER_ResourceLocation.tryParse(
+        MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID
+    )
+
+    if(location == null)
     {
         return null
     }
 
     try
     {
-        if(player.uuid != null)
+        return server.getLevel(location)
+    }
+    catch(error)
+    {
+        return null
+    }
+}
+
+
+function modfusionControllerGetSeedText(level)
+{
+    if(level == null)
+    {
+        return null
+    }
+
+    /*
+     * Do not call String(level.getSeed()) here.  Rhino first converts the
+     * Java long to an IEEE-754 number and silently loses its low bits.  The
+     * middle-island density function hashes More Density Functions' original
+     * 64-bit seed, so even a one-bit difference moves the island centre.
+     *
+     * Read the exact same Java long used by that density function through a
+     * reflected boxed Long and convert the Long itself to decimal text.  The
+     * planner then parses the text into its four 16-bit limbs without ever
+     * passing through a JavaScript number.
+     */
+    if(MODFUSION_BUILDING_CONTROLLER_EXACT_SEED_TEXT != null)
+    {
+        return MODFUSION_BUILDING_CONTROLLER_EXACT_SEED_TEXT
+    }
+
+    try
+    {
+        var classLoader = level.getClass().getClassLoader()
+        var holderClass = classLoader.loadClass(
+            MODFUSION_CONTROLLER_MDF_SEED_HOLDER_CLASS_NAME
+        )
+
+        var seedField = holderClass.getDeclaredField("worldSeed")
+        seedField.setAccessible(true)
+
+        var boxedSeed = seedField.get(null)
+        var seedText = String(boxedSeed.toString())
+
+        if(!/^-?[0-9]{1,20}$/.test(seedText))
         {
-            return String(player.uuid)
+            throw new Error("invalid exact seed text: " + seedText)
         }
-    }
-    catch(error1)
-    {
-        /* Try the profile fallback. */
-    }
 
-    try
-    {
-        return String(player.getGameProfile().getId())
-    }
-    catch(error2)
-    {
-        /* Try the name fallback. */
-    }
+        MODFUSION_BUILDING_CONTROLLER_EXACT_SEED_TEXT = seedText
 
-    try
-    {
-        return String(player.getGameProfile().getName())
+        console.log(
+            "[ModFusion Building Controller] Exact 64-bit terrain seed " +
+            seedText
+        )
+
+        return seedText
     }
-    catch(error3)
+    catch(error)
     {
+        console.error(
+            "[ModFusion Building Controller] Exact world seed is " +
+            "unavailable; refusing to plan with a rounded JS number. " +
+            error
+        )
+
         return null
     }
 }
@@ -213,33 +239,40 @@ function modfusionControllerGetPlayerKey(player)
 
 function modfusionControllerTell(player, message)
 {
-    console.log("[ModFusion Controller] " + message)
-
     if(player != null)
     {
-        player.tell("[ModFusion Controller] " + message)
+        player.tell(Component.of(String(message)))
     }
+}
+
+
+function getModfusionControllerConfig()
+{
+    return JSON.parse(JSON.stringify(
+        MODFUSION_BUILDING_CONTROLLER_CONFIG
+    ))
 }
 
 
 function validateModfusionControllerConfig()
 {
-    var integerFields = [
+    var fields = [
         ["playerScanIntervalTicks", 1, 1200],
         ["workerIntervalTicks", 1, 1200],
-        ["chunksPerWorkerStep", 1, 64],
-        ["placementPreloadRadiusChunks", 0, 8],
-        ["maxQueueSize", 1, 4096]
+        ["maxQueueSize", 1, 4096],
+        ["planningWarningMillis", 1, 60000],
+        ["maximumPlanningMillis", 1, 60000],
+        ["maximumFootprintRadiusChunks", 0, 32]
     ]
 
     var i
 
-    for(i = 0; i < integerFields.length; i++)
+    for(i = 0; i < fields.length; i++)
     {
-        var key = integerFields[i][0]
-        var minimum = integerFields[i][1]
-        var maximum = integerFields[i][2]
-        var value = MODFUSION_CONTROLLER_CONFIG[key]
+        var key = fields[i][0]
+        var minimum = fields[i][1]
+        var maximum = fields[i][2]
+        var value = MODFUSION_BUILDING_CONTROLLER_CONFIG[key]
 
         if(
             typeof value !== "number" ||
@@ -249,55 +282,34 @@ function validateModfusionControllerConfig()
         )
         {
             throw new Error(
-                "[ModFusion Controller] " + key +
-                " must be from " + minimum + " to " + maximum
+                "[ModFusion Building Controller] " + key +
+                " must be an integer from " + minimum +
+                " to " + maximum
             )
         }
     }
-}
 
-
-function getModfusionControllerConfig()
-{
-    var reserved = {}
-    var key
-
-    for(key in MODFUSION_CONTROLLER_CONFIG.reservedCells)
+    if(
+        MODFUSION_BUILDING_CONTROLLER_CONFIG.planningWarningMillis >
+        MODFUSION_BUILDING_CONTROLLER_CONFIG.maximumPlanningMillis
+    )
     {
-        if(modfusionControllerHasOwn(
-            MODFUSION_CONTROLLER_CONFIG.reservedCells,
-            key
-        ))
-        {
-            reserved[key] = MODFUSION_CONTROLLER_CONFIG.reservedCells[key]
-        }
-    }
-
-    return {
-        enabled: MODFUSION_CONTROLLER_CONFIG.enabled,
-        playerScanIntervalTicks:
-            MODFUSION_CONTROLLER_CONFIG.playerScanIntervalTicks,
-        workerIntervalTicks:
-            MODFUSION_CONTROLLER_CONFIG.workerIntervalTicks,
-        chunksPerWorkerStep:
-            MODFUSION_CONTROLLER_CONFIG.chunksPerWorkerStep,
-        placementPreloadRadiusChunks:
-            MODFUSION_CONTROLLER_CONFIG.placementPreloadRadiusChunks,
-        maxQueueSize: MODFUSION_CONTROLLER_CONFIG.maxQueueSize,
-        allowInexactYAdapters:
-            MODFUSION_CONTROLLER_CONFIG.allowInexactYAdapters,
-        reservedCells: reserved
+        throw new Error(
+            "[ModFusion Building Controller] planningWarningMillis " +
+            "cannot exceed maximumPlanningMillis"
+        )
     }
 }
 
 
 /*
  * =========================================================
- * Persistent cell state
+ * Persistent per-cell state
  * =========================================================
  */
 
-function encodeModfusionControllerCoordinate(value)
+
+function modfusionControllerEncodeCoordinate(value)
 {
     var number = modfusionControllerReadInteger(value)
 
@@ -310,24 +322,22 @@ function encodeModfusionControllerCoordinate(value)
 }
 
 
-function getModfusionControllerStateBase(cellX, cellZ)
+function modfusionControllerGetStateBase(cellX, cellZ)
 {
-    var encodedX = encodeModfusionControllerCoordinate(cellX)
-    var encodedZ = encodeModfusionControllerCoordinate(cellZ)
+    var x = modfusionControllerEncodeCoordinate(cellX)
+    var z = modfusionControllerEncodeCoordinate(cellZ)
 
-    if(encodedX == null || encodedZ == null)
+    if(x == null || z == null)
     {
         return null
     }
 
-    return (
-        MODFUSION_CONTROLLER_STATE_PREFIX + "_" +
-        encodedX + "_" + encodedZ
-    )
+    return MODFUSION_BUILDING_CONTROLLER_STATE_PREFIX +
+        "_" + x + "_" + z
 }
 
 
-function getModfusionControllerData(level)
+function modfusionControllerGetData(level)
 {
     if(level == null)
     {
@@ -345,10 +355,10 @@ function getModfusionControllerData(level)
 }
 
 
-function getModfusionControllerCellState(level, cellX, cellZ)
+function getModfusionControllerState(level, cellX, cellZ)
 {
-    var data = getModfusionControllerData(level)
-    var base = getModfusionControllerStateBase(cellX, cellZ)
+    var data = modfusionControllerGetData(level)
+    var base = modfusionControllerGetStateBase(cellX, cellZ)
 
     if(data == null || base == null)
     {
@@ -373,190 +383,288 @@ function getModfusionControllerCellState(level, cellX, cellZ)
         buildingId: String(data.getString(base + "_buildingId")),
         targetId: String(data.getString(base + "_targetId")),
         layerId: String(data.getString(base + "_layerId")),
+
         x: data.getInt(base + "_x"),
         y: data.getInt(base + "_y"),
         z: data.getInt(base + "_z"),
-        attempt: data.getInt(base + "_attempt"),
-        updatedTick: data.getInt(base + "_updatedTick"),
+
         exactY: data.getBoolean(base + "_exactY"),
+        updatedTick: data.getInt(base + "_updatedTick"),
+
         cellX: modfusionControllerReadInteger(cellX),
         cellZ: modfusionControllerReadInteger(cellZ)
     }
 }
 
 
-function isModfusionControllerTerminalState(status)
+function modfusionControllerClearState(level, cellX, cellZ)
 {
-    return MODFUSION_CONTROLLER_TERMINAL_STATES[String(status)] === true
-}
-
-
-function clearModfusionControllerCellState(level, cellX, cellZ)
-{
-    var data = getModfusionControllerData(level)
-    var base = getModfusionControllerStateBase(cellX, cellZ)
+    var data = modfusionControllerGetData(level)
+    var base = modfusionControllerGetStateBase(cellX, cellZ)
 
     if(data == null || base == null)
     {
         return false
     }
 
-    var i
-
-    for(i = 0; i < MODFUSION_CONTROLLER_STATE_FIELDS.length; i++)
+    try
     {
-        data.remove(
-            base + "_" + MODFUSION_CONTROLLER_STATE_FIELDS[i]
+        var i
+
+        for(
+            i = 0;
+            i < MODFUSION_BUILDING_CONTROLLER_STATE_FIELDS.length;
+            i++
         )
-    }
+        {
+            data.remove(
+                base + "_" +
+                MODFUSION_BUILDING_CONTROLLER_STATE_FIELDS[i]
+            )
+        }
 
-    return true
+        return true
+    }
+    catch(error)
+    {
+        console.error(
+            "[ModFusion Building Controller] Failed to clear state " +
+            cellX + ":" + cellZ + " - " + error
+        )
+
+        return false
+    }
 }
 
 
-function writeModfusionControllerCellState(level, cell, record)
+function modfusionControllerWriteState(level, cell, record)
 {
-    var data = getModfusionControllerData(level)
-    var base = getModfusionControllerStateBase(cell.x, cell.z)
+    var data = modfusionControllerGetData(level)
+    var base = cell != null
+        ? modfusionControllerGetStateBase(cell.x, cell.z)
+        : null
 
-    if(data == null || base == null)
+    if(data == null || base == null || record == null)
     {
         return false
     }
 
-    clearModfusionControllerCellState(level, cell.x, cell.z)
+    try
+    {
+        modfusionControllerClearState(level, cell.x, cell.z)
 
-    data.putString(base + "_status", String(record.status))
-    data.putString(
-        base + "_reason",
-        record.reason != null ? String(record.reason) : ""
-    )
-    data.putString(
-        base + "_buildingId",
-        record.buildingId != null ? String(record.buildingId) : ""
-    )
-    data.putString(
-        base + "_targetId",
-        record.targetId != null ? String(record.targetId) : ""
-    )
-    data.putString(
-        base + "_layerId",
-        record.layerId != null ? String(record.layerId) : ""
-    )
+        data.putString(base + "_status", String(record.status || ""))
+        data.putString(
+            base + "_reason",
+            record.reason != null ? String(record.reason) : ""
+        )
+        data.putString(
+            base + "_buildingId",
+            record.buildingId != null ? String(record.buildingId) : ""
+        )
+        data.putString(
+            base + "_targetId",
+            record.targetId != null ? String(record.targetId) : ""
+        )
+        data.putString(
+            base + "_layerId",
+            record.layerId != null ? String(record.layerId) : ""
+        )
 
-    data.putInt(
-        base + "_x",
-        modfusionControllerReadInteger(record.x) != null
-            ? modfusionControllerReadInteger(record.x)
-            : 0
-    )
-    data.putInt(
-        base + "_y",
-        modfusionControllerReadInteger(record.y) != null
-            ? modfusionControllerReadInteger(record.y)
-            : 0
-    )
-    data.putInt(
-        base + "_z",
-        modfusionControllerReadInteger(record.z) != null
-            ? modfusionControllerReadInteger(record.z)
-            : 0
-    )
-    data.putInt(
-        base + "_attempt",
-        modfusionControllerReadInteger(record.attempt) != null
-            ? modfusionControllerReadInteger(record.attempt)
-            : -1
-    )
-    data.putInt(base + "_updatedTick", MODFUSION_CONTROLLER_TICK)
-    data.putBoolean(base + "_exactY", record.exactY === true)
+        data.putInt(
+            base + "_x",
+            modfusionControllerReadInteger(record.x) != null
+                ? modfusionControllerReadInteger(record.x)
+                : 0
+        )
+        data.putInt(
+            base + "_y",
+            modfusionControllerReadInteger(record.y) != null
+                ? modfusionControllerReadInteger(record.y)
+                : 0
+        )
+        data.putInt(
+            base + "_z",
+            modfusionControllerReadInteger(record.z) != null
+                ? modfusionControllerReadInteger(record.z)
+                : 0
+        )
 
-    return true
+        data.putBoolean(base + "_exactY", record.exactY === true)
+        data.putInt(
+            base + "_updatedTick",
+            MODFUSION_BUILDING_CONTROLLER_TICK
+        )
+
+        return true
+    }
+    catch(error)
+    {
+        console.error(
+            "[ModFusion Building Controller] Failed to write state " +
+            cell.x + ":" + cell.z + " - " + error
+        )
+
+        return false
+    }
+}
+
+
+function modfusionControllerIsTerminalState(status)
+{
+    return MODFUSION_BUILDING_CONTROLLER_TERMINAL_STATES[
+        String(status || "")
+    ] === true
 }
 
 
 /*
  * =========================================================
- * Queue management
+ * Queue
  * =========================================================
  */
 
-function getModfusionControllerCellQueueKey(cell)
+
+function modfusionControllerCellKey(cell)
 {
-    return cell != null ? String(cell.x) + ":" + String(cell.z) : null
-}
-
-
-function isModfusionControllerReservedCell(cell)
-{
-    var key = getModfusionControllerCellQueueKey(cell)
-
-    return (
-        key != null &&
-        MODFUSION_CONTROLLER_CONFIG.reservedCells[key] === true
-    )
+    return cell != null
+        ? String(cell.x) + ":" + String(cell.z)
+        : null
 }
 
 
 function enqueueModfusionControllerCell(level, cellX, cellZ, source)
 {
-    if(MODFUSION_CONTROLLER_CONFIG.enabled !== true)
+    if(MODFUSION_BUILDING_CONTROLLER_CONFIG.enabled !== true)
     {
-        return {
-            queued: false,
-            reason: "CONTROLLER_DISABLED"
-        }
+        return { queued: false, reason: "CONTROLLER_DISABLED" }
     }
 
     if(
-        global.ModfusionBuildingDistributor == null ||
-        typeof global.ModfusionBuildingDistributor.getCell !== "function"
+        level == null ||
+        modfusionControllerIsClientLevel(level) ||
+        modfusionControllerGetDimensionId(level) !==
+            MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID
     )
     {
-        return {
-            queued: false,
-            reason: "DISTRIBUTOR_NOT_LOADED"
-        }
+        return { queued: false, reason: "WRONG_DIMENSION" }
     }
 
-    var cell = global.ModfusionBuildingDistributor.getCell(cellX, cellZ)
+    if(
+        global.ModfusionBuildingPlanner == null ||
+        typeof global.ModfusionBuildingPlanner.getCell !== "function"
+    )
+    {
+        return { queued: false, reason: "PLANNER_NOT_LOADED" }
+    }
 
-    if(cell == null)
+    var cell
+
+    try
+    {
+        cell = global.ModfusionBuildingPlanner.getCell(cellX, cellZ)
+    }
+    catch(error)
     {
         return {
             queued: false,
-            reason: "INVALID_CELL"
+            reason: "INVALID_CELL",
+            detail: String(error)
         }
     }
 
-    var key = getModfusionControllerCellQueueKey(cell)
+    var key = modfusionControllerCellKey(cell)
+    var state = getModfusionControllerState(level, cell.x, cell.z)
 
-    if(isModfusionControllerReservedCell(cell))
+    /*
+     * Migrate failures written by the former 100 ms planner limit before the
+     * terminal-state gate.  No placement was attempted for this reason, so
+     * clearing only this exact legacy record cannot duplicate a structure.
+     */
+    if(
+        state.status === "FAILED" &&
+        state.reason === "PLANNER_TIME_BUDGET_EXCEEDED"
+    )
     {
-        var reservedState = getModfusionControllerCellState(
-            level,
-            cell.x,
-            cell.z
+        if(!modfusionControllerClearState(level, cell.x, cell.z))
+        {
+            return {
+                queued: false,
+                reason: "LEGACY_TIMEOUT_STATE_CLEAR_FAILED",
+                cell: cell,
+                state: state
+            }
+        }
+
+        console.log(
+            "[ModFusion Building Controller] Reopened legacy " +
+            "planner-timeout cell " + key
         )
 
-        if(reservedState.status !== "RESERVED")
-        {
-            writeModfusionControllerCellState(level, cell, {
-                status: "RESERVED",
-                reason: "SPAWN_CELL"
-            })
-        }
-
-        return {
-            queued: false,
-            reason: "RESERVED",
-            cell: cell
-        }
+        state = getModfusionControllerState(level, cell.x, cell.z)
     }
 
-    var state = getModfusionControllerCellState(level, cell.x, cell.z)
+    /*
+     * Version 1 used /place structure and wrote PLACE_COMMAND_FAILED when
+     * Twilight's real randomized bounds extended beyond the estimated loaded
+     * footprint. Version 2 no longer emits that reason, so every record with
+     * this exact legacy reason is safe to reopen once for direct placement.
+     * The vanilla command checked all chunks before writing any blocks.
+     */
+    if(
+        state.status === "FAILED" &&
+        state.reason === "PLACE_COMMAND_FAILED"
+    )
+    {
+        if(!modfusionControllerClearState(level, cell.x, cell.z))
+        {
+            return {
+                queued: false,
+                reason: "LEGACY_COMMAND_STATE_CLEAR_FAILED",
+                cell: cell,
+                state: state
+            }
+        }
 
-    if(isModfusionControllerTerminalState(state.status))
+        console.log(
+            "[ModFusion Building Controller] Reopened legacy " +
+            "command-placement failure cell " + key
+        )
+
+        state = getModfusionControllerState(level, cell.x, cell.z)
+    }
+
+    /*
+     * Adapter v2 initially exposed Java 17's package-private immutable piece
+     * list directly to Rhino. The corrected adapter copies that list into a
+     * public ArrayList and uses a new failure reason for any future runtime
+     * exception, so this exact old record can be reopened once without a
+     * retry loop.
+     */
+    if(
+        state.status === "FAILED" &&
+        state.reason === "STRUCTURE_PREPARATION_EXCEPTION"
+    )
+    {
+        if(!modfusionControllerClearState(level, cell.x, cell.z))
+        {
+            return {
+                queued: false,
+                reason: "LEGACY_PREPARATION_STATE_CLEAR_FAILED",
+                cell: cell,
+                state: state
+            }
+        }
+
+        console.log(
+            "[ModFusion Building Controller] Reopened legacy " +
+            "immutable-piece-list failure cell " + key
+        )
+
+        state = getModfusionControllerState(level, cell.x, cell.z)
+    }
+
+    if(modfusionControllerIsTerminalState(state.status))
     {
         return {
             queued: false,
@@ -566,16 +674,10 @@ function enqueueModfusionControllerCell(level, cellX, cellZ, source)
         }
     }
 
-    if(modfusionControllerHasOwn(MODFUSION_CONTROLLER_SESSION_BLOCKED, key))
-    {
-        return {
-            queued: false,
-            reason: MODFUSION_CONTROLLER_SESSION_BLOCKED[key],
-            cell: cell
-        }
-    }
-
-    if(modfusionControllerHasOwn(MODFUSION_CONTROLLER_QUEUED_CELLS, key))
+    if(modfusionControllerHasOwn(
+        MODFUSION_BUILDING_CONTROLLER_QUEUED,
+        key
+    ))
     {
         return {
             queued: false,
@@ -585,8 +687,8 @@ function enqueueModfusionControllerCell(level, cellX, cellZ, source)
     }
 
     if(
-        MODFUSION_CONTROLLER_QUEUE.length >=
-        MODFUSION_CONTROLLER_CONFIG.maxQueueSize
+        MODFUSION_BUILDING_CONTROLLER_QUEUE.length >=
+        MODFUSION_BUILDING_CONTROLLER_CONFIG.maxQueueSize
     )
     {
         return {
@@ -599,24 +701,11 @@ function enqueueModfusionControllerCell(level, cellX, cellZ, source)
     var job = {
         key: key,
         cell: cell,
-        source: source != null ? String(source) : "UNKNOWN",
-        phase: "PLAN",
-        plan: null,
-        candidates: [],
-        candidateIndex: 0,
-        resolved: null,
-        preloadChunks: [],
-        preloadIndex: 0,
-        analysisFailures: []
+        source: String(source || "UNKNOWN")
     }
 
-    MODFUSION_CONTROLLER_QUEUE.push(job)
-    MODFUSION_CONTROLLER_QUEUED_CELLS[key] = true
-
-    console.log(
-        "[ModFusion Controller] Queued cell " + key +
-        " from " + job.source
-    )
+    MODFUSION_BUILDING_CONTROLLER_QUEUE.push(job)
+    MODFUSION_BUILDING_CONTROLLER_QUEUED[key] = true
 
     return {
         queued: true,
@@ -626,26 +715,31 @@ function enqueueModfusionControllerCell(level, cellX, cellZ, source)
 }
 
 
-function enqueueModfusionControllerAtBlock(level, x, z, source)
+function enqueueModfusionControllerAtBlock(level, blockX, blockZ, source)
 {
     if(
-        global.ModfusionBuildingDistributor == null ||
-        typeof global.ModfusionBuildingDistributor.getCellAtBlock !== "function"
+        global.ModfusionBuildingPlanner == null ||
+        typeof global.ModfusionBuildingPlanner.getCellAtBlock !== "function"
     )
     {
-        return {
-            queued: false,
-            reason: "DISTRIBUTOR_NOT_LOADED"
-        }
+        return { queued: false, reason: "PLANNER_NOT_LOADED" }
     }
 
-    var cell = global.ModfusionBuildingDistributor.getCellAtBlock(x, z)
+    var cell
 
-    if(cell == null)
+    try
+    {
+        cell = global.ModfusionBuildingPlanner.getCellAtBlock(
+            blockX,
+            blockZ
+        )
+    }
+    catch(error)
     {
         return {
             queued: false,
-            reason: "INVALID_COORDINATES"
+            reason: "INVALID_COORDINATES",
+            detail: String(error)
         }
     }
 
@@ -658,496 +752,742 @@ function enqueueModfusionControllerAtBlock(level, x, z, source)
 }
 
 
-function finishModfusionControllerActiveJob()
+function modfusionControllerFinishActiveJob()
 {
-    if(MODFUSION_CONTROLLER_ACTIVE_JOB != null)
+    if(MODFUSION_BUILDING_CONTROLLER_ACTIVE != null)
     {
-        delete MODFUSION_CONTROLLER_QUEUED_CELLS[
-            MODFUSION_CONTROLLER_ACTIVE_JOB.key
+        delete MODFUSION_BUILDING_CONTROLLER_QUEUED[
+            MODFUSION_BUILDING_CONTROLLER_ACTIVE.key
         ]
     }
 
-    MODFUSION_CONTROLLER_ACTIVE_JOB = null
+    MODFUSION_BUILDING_CONTROLLER_ACTIVE = null
 }
 
 
 function getModfusionControllerQueueStatus()
 {
     return {
-        queued: MODFUSION_CONTROLLER_QUEUE.length,
-        active: MODFUSION_CONTROLLER_ACTIVE_JOB != null
+        queued: MODFUSION_BUILDING_CONTROLLER_QUEUE.length,
+        active: MODFUSION_BUILDING_CONTROLLER_ACTIVE != null
             ? {
-                cell: {
-                    x: MODFUSION_CONTROLLER_ACTIVE_JOB.cell.x,
-                    z: MODFUSION_CONTROLLER_ACTIVE_JOB.cell.z
-                },
-                phase: MODFUSION_CONTROLLER_ACTIVE_JOB.phase,
-                candidateIndex:
-                    MODFUSION_CONTROLLER_ACTIVE_JOB.candidateIndex,
-                preloadIndex:
-                    MODFUSION_CONTROLLER_ACTIVE_JOB.preloadIndex,
-                preloadTotal:
-                    MODFUSION_CONTROLLER_ACTIVE_JOB.preloadChunks.length
+                key: MODFUSION_BUILDING_CONTROLLER_ACTIVE.key,
+                source: MODFUSION_BUILDING_CONTROLLER_ACTIVE.source
             }
             : null
     }
 }
 
 
-/*
- * =========================================================
- * Gradual worker
- * =========================================================
- */
-
-function resolveModfusionControllerPreloadRadius(building)
+function modfusionControllerRemoveQueuedCell(key)
 {
-    var defaultRadius =
-        MODFUSION_CONTROLLER_CONFIG.placementPreloadRadiusChunks
+    var filtered = []
+    var i
+
+    for(i = 0; i < MODFUSION_BUILDING_CONTROLLER_QUEUE.length; i++)
+    {
+        if(MODFUSION_BUILDING_CONTROLLER_QUEUE[i].key !== key)
+        {
+            filtered.push(MODFUSION_BUILDING_CONTROLLER_QUEUE[i])
+        }
+    }
+
+    MODFUSION_BUILDING_CONTROLLER_QUEUE = filtered
+    delete MODFUSION_BUILDING_CONTROLLER_QUEUED[key]
 
     if(
-        building == null ||
-        building.placement == null ||
-        building.placement.options == null
+        MODFUSION_BUILDING_CONTROLLER_ACTIVE != null &&
+        MODFUSION_BUILDING_CONTROLLER_ACTIVE.key === key
     )
     {
-        return defaultRadius
+        MODFUSION_BUILDING_CONTROLLER_ACTIVE = null
     }
-
-    var configured = modfusionControllerReadInteger(
-        building.placement.options.preloadRadiusChunks
-    )
-
-    if(configured == null)
-    {
-        return defaultRadius
-    }
-
-    if(configured < 0)
-    {
-        return 0
-    }
-
-    if(configured > 8)
-    {
-        return 8
-    }
-
-    return configured
 }
 
 
-function createModfusionControllerPreloadChunks(centerChunkX, centerChunkZ, radius)
+function retryModfusionControllerCell(level, cellX, cellZ, source)
 {
-    var result = []
-    var ring
-
-    for(ring = 0; ring <= radius; ring++)
+    if(
+        global.ModfusionBuildingPlanner == null ||
+        typeof global.ModfusionBuildingPlanner.getCell !== "function"
+    )
     {
-        var dx
-        var dz
+        return { queued: false, reason: "PLANNER_NOT_LOADED" }
+    }
 
-        for(dx = -ring; dx <= ring; dx++)
+    var cell
+
+    try
+    {
+        cell = global.ModfusionBuildingPlanner.getCell(cellX, cellZ)
+    }
+    catch(error)
+    {
+        return { queued: false, reason: "INVALID_CELL" }
+    }
+
+    var state = getModfusionControllerState(level, cell.x, cell.z)
+
+    if(state.status !== "FAILED")
+    {
+        return {
+            queued: false,
+            reason: "STATE_NOT_FAILED",
+            state: state,
+            cell: cell
+        }
+    }
+
+    var key = modfusionControllerCellKey(cell)
+    modfusionControllerRemoveQueuedCell(key)
+
+    if(!modfusionControllerClearState(level, cell.x, cell.z))
+    {
+        return {
+            queued: false,
+            reason: "STATE_CLEAR_FAILED",
+            cell: cell
+        }
+    }
+
+    return enqueueModfusionControllerCell(
+        level,
+        cell.x,
+        cell.z,
+        source || "MANUAL_RETRY"
+    )
+}
+
+
+/*
+ * =========================================================
+ * Planning and footprint readiness
+ * =========================================================
+ */
+
+
+function modfusionControllerCreatePlan(level, cell)
+{
+    if(
+        global.ModfusionBuildingPlanner == null ||
+        typeof global.ModfusionBuildingPlanner.plan !== "function"
+    )
+    {
+        return {
+            status: "BLOCKED",
+            reason: "PLANNER_NOT_LOADED"
+        }
+    }
+
+    var seedText = modfusionControllerGetSeedText(level)
+
+    if(seedText == null)
+    {
+        return {
+            status: "BLOCKED",
+            reason: "WORLD_SEED_UNAVAILABLE"
+        }
+    }
+
+    try
+    {
+        var startedAt = Date.now()
+        var plan = global.ModfusionBuildingPlanner.plan(
+            seedText,
+            cell.x,
+            cell.z
+        )
+
+        var elapsedMillis = Date.now() - startedAt
+
+        if(
+            elapsedMillis >
+                MODFUSION_BUILDING_CONTROLLER_CONFIG.planningWarningMillis
+        )
         {
-            for(dz = -ring; dz <= ring; dz++)
+            console.warn(
+                "[ModFusion Building Controller] Slow planner cell " +
+                cell.x + ":" + cell.z + " used " +
+                elapsedMillis + " ms"
+            )
+        }
+
+        if(
+            elapsedMillis >
+                MODFUSION_BUILDING_CONTROLLER_CONFIG.maximumPlanningMillis
+        )
+        {
+            return {
+                status: "BLOCKED",
+                reason: "PLANNER_TIME_BUDGET_EXCEEDED",
+                detail: "Planner used " + elapsedMillis + " ms",
+                cell: cell,
+                island: plan != null ? plan.island : null
+            }
+        }
+
+        return plan
+    }
+    catch(error)
+    {
+        return {
+            status: "BLOCKED",
+            reason: "PLANNER_EXCEPTION",
+            detail: String(error)
+        }
+    }
+}
+
+
+function getModfusionControllerFootprintReadiness(level, plan)
+{
+    if(
+        level == null ||
+        plan == null ||
+        plan.placement == null ||
+        plan.placement.footprint == null
+    )
+    {
+        return {
+            ready: false,
+            reason: "FOOTPRINT_MISSING",
+            missing: 0,
+            total: 0
+        }
+    }
+
+    var footprint = plan.placement.footprint
+    var centerChunkX = modfusionControllerReadInteger(
+        footprint.centerChunkX
+    )
+    var centerChunkZ = modfusionControllerReadInteger(
+        footprint.centerChunkZ
+    )
+
+    if(centerChunkX == null || centerChunkZ == null)
+    {
+        return {
+            ready: false,
+            reason: "INVALID_FOOTPRINT_CENTER",
+            missing: 0,
+            total: 0
+        }
+    }
+
+    var explicitMinimumX = modfusionControllerReadInteger(
+        footprint.minChunkX
+    )
+    var explicitMaximumX = modfusionControllerReadInteger(
+        footprint.maxChunkX
+    )
+    var explicitMinimumZ = modfusionControllerReadInteger(
+        footprint.minChunkZ
+    )
+    var explicitMaximumZ = modfusionControllerReadInteger(
+        footprint.maxChunkZ
+    )
+    var explicitCount = 0
+
+    if(explicitMinimumX != null) explicitCount++
+    if(explicitMaximumX != null) explicitCount++
+    if(explicitMinimumZ != null) explicitCount++
+    if(explicitMaximumZ != null) explicitCount++
+
+    if(explicitCount !== 0 && explicitCount !== 4)
+    {
+        return {
+            ready: false,
+            reason: "INCOMPLETE_EXACT_FOOTPRINT",
+            missing: 0,
+            total: 0
+        }
+    }
+
+    var minimumX
+    var maximumX
+    var minimumZ
+    var maximumZ
+    var radius
+
+    if(explicitCount === 4)
+    {
+        minimumX = explicitMinimumX
+        maximumX = explicitMaximumX
+        minimumZ = explicitMinimumZ
+        maximumZ = explicitMaximumZ
+
+        if(
+            minimumX > maximumX ||
+            minimumZ > maximumZ ||
+            centerChunkX < minimumX ||
+            centerChunkX > maximumX ||
+            centerChunkZ < minimumZ ||
+            centerChunkZ > maximumZ
+        )
+        {
+            return {
+                ready: false,
+                reason: "INVALID_EXACT_FOOTPRINT_BOUNDS",
+                missing: 0,
+                total: 0
+            }
+        }
+
+        radius = Math.max(
+            Math.abs(centerChunkX - minimumX),
+            Math.abs(maximumX - centerChunkX),
+            Math.abs(centerChunkZ - minimumZ),
+            Math.abs(maximumZ - centerChunkZ)
+        )
+    }
+    else
+    {
+        radius = modfusionControllerReadInteger(footprint.radiusChunks)
+
+        if(radius == null)
+        {
+            return {
+                ready: false,
+                reason: "INVALID_FOOTPRINT_RADIUS",
+                missing: 0,
+                total: 0
+            }
+        }
+
+        minimumX = footprint.waitForFootprint === true
+            ? centerChunkX - radius
+            : centerChunkX
+        maximumX = footprint.waitForFootprint === true
+            ? centerChunkX + radius
+            : centerChunkX
+        minimumZ = footprint.waitForFootprint === true
+            ? centerChunkZ - radius
+            : centerChunkZ
+        maximumZ = footprint.waitForFootprint === true
+            ? centerChunkZ + radius
+            : centerChunkZ
+    }
+
+    if(
+        radius < 0 ||
+        radius >
+            MODFUSION_BUILDING_CONTROLLER_CONFIG
+                .maximumFootprintRadiusChunks
+    )
+    {
+        return {
+            ready: false,
+            reason: "INVALID_FOOTPRINT_RADIUS",
+            missing: 0,
+            total: 0
+        }
+    }
+
+    var total = 0
+    var missing = 0
+    var firstMissingX = 0
+    var firstMissingZ = 0
+    var cx
+    var cz
+
+    for(cx = minimumX; cx <= maximumX; cx++)
+    {
+        for(cz = minimumZ; cz <= maximumZ; cz++)
+        {
+            total++
+
+            var loaded = false
+
+            try
             {
-                if(Math.max(Math.abs(dx), Math.abs(dz)) !== ring)
+                loaded = level.hasChunk(cx, cz) === true
+            }
+            catch(error)
+            {
+                return {
+                    ready: false,
+                    reason: "CHUNK_READINESS_EXCEPTION",
+                    detail: String(error),
+                    missing: missing,
+                    total: total
+                }
+            }
+
+            if(!loaded)
+            {
+                if(missing === 0)
                 {
-                    continue
+                    firstMissingX = cx
+                    firstMissingZ = cz
                 }
 
-                result.push({
-                    x: centerChunkX + dx,
-                    z: centerChunkZ + dz
-                })
+                missing++
             }
         }
     }
 
-    return result
-}
-
-
-function blockModfusionControllerSessionCell(job, reason)
-{
-    MODFUSION_CONTROLLER_SESSION_BLOCKED[job.key] = String(reason)
-
-    console.log(
-        "[ModFusion Controller] Session-blocked cell " + job.key +
-        ": " + reason
-    )
-
-    finishModfusionControllerActiveJob()
-}
-
-
-function failModfusionControllerCell(level, job, status, reason)
-{
-    var plan = job.plan
-    var candidate = job.resolved != null ? job.resolved.candidate : null
-    var analysis = job.resolved != null ? job.resolved.analysis : null
-    var center = analysis != null ? analysis.center : null
-
-    writeModfusionControllerCellState(level, job.cell, {
-        status: status,
-        reason: reason,
-        buildingId: plan != null ? plan.buildingId : null,
-        targetId: (
-            plan != null &&
-            plan.building != null &&
-            plan.building.placement != null
-        ) ? plan.building.placement.targetId : null,
-        layerId: plan != null ? plan.layerId : null,
-        x: center != null ? center.x : null,
-        y: center != null ? center.y : null,
-        z: center != null ? center.z : null,
-        attempt: candidate != null ? candidate.attempt : -1,
-        exactY: false
-    })
-
-    console.log(
-        "[ModFusion Controller] Cell " + job.key +
-        " -> " + status + " / " + reason
-    )
-
-    finishModfusionControllerActiveJob()
-}
-
-
-function processModfusionControllerPlan(level, job)
-{
-    if(
-        global.ModfusionBuildingDistributor == null ||
-        global.ModfusionBuildingGeneration == null ||
-        global.ModfusionBuildingRegistry == null ||
-        global.ModfusionBuildingAnalyzer == null
-    )
-    {
-        blockModfusionControllerSessionCell(job, "DEPENDENCY_NOT_LOADED")
-        return
+    return {
+        ready: missing === 0,
+        reason: missing === 0 ? null : "FOOTPRINT_NOT_LOADED",
+        missing: missing,
+        total: total,
+        firstMissingX: firstMissingX,
+        firstMissingZ: firstMissingZ,
+        minimumChunkX: minimumX,
+        maximumChunkX: maximumX,
+        minimumChunkZ: minimumZ,
+        maximumChunkZ: maximumZ,
+        exactBounds: explicitCount === 4
     }
+}
 
-    var state = getModfusionControllerCellState(
+
+/*
+ * =========================================================
+ * Worker
+ * =========================================================
+ */
+
+
+function modfusionControllerWritePlanState(level, plan, status, reason)
+{
+    return modfusionControllerWriteState(
+        level,
+        plan.cell,
+        {
+            status: status,
+            reason: reason,
+            buildingId: plan.buildingId,
+            targetId: plan.placement != null
+                ? plan.placement.targetId
+                : null,
+            layerId: plan.island != null
+                ? plan.island.layerId
+                : null,
+            x: plan.placement != null ? plan.placement.x : 0,
+            y: plan.placement != null ? plan.placement.y : 0,
+            z: plan.placement != null ? plan.placement.z : 0,
+            exactY: plan.placement != null &&
+                plan.placement.exactY === true
+        }
+    )
+}
+
+
+function processModfusionControllerJob(level, job)
+{
+    var state = getModfusionControllerState(
         level,
         job.cell.x,
         job.cell.z
     )
 
-    if(isModfusionControllerTerminalState(state.status))
+    if(modfusionControllerIsTerminalState(state.status))
     {
-        finishModfusionControllerActiveJob()
+        modfusionControllerFinishActiveJob()
         return
     }
 
-    var plan = global.ModfusionBuildingDistributor.createPlan(
-        level,
-        job.cell.x,
-        job.cell.z
-    )
+    var plan = modfusionControllerCreatePlan(level, job.cell)
 
-    if(plan == null || plan.status !== "OK")
+    if(plan == null)
     {
-        blockModfusionControllerSessionCell(
-            job,
-            plan != null ? plan.reason : "NULL_PLAN"
+        modfusionControllerFinishActiveJob()
+        return
+    }
+
+    if(plan.status === "BLOCKED")
+    {
+        var blockedReason = plan.reason || "PLANNER_BLOCKED"
+
+        modfusionControllerWriteState(level, job.cell, {
+            status: "FAILED",
+            reason: blockedReason,
+            layerId: plan.island != null ? plan.island.layerId : null
+        })
+
+        console.error(
+            "[ModFusion Building Controller] Planner blocked cell " +
+            job.key + " - " + blockedReason +
+            (plan.detail != null ? " / " + plan.detail : "")
         )
+
+        modfusionControllerFinishActiveJob()
+        return
+    }
+
+    if(plan.status === "RESERVED")
+    {
+        modfusionControllerWriteState(level, job.cell, {
+            status: "RESERVED",
+            reason: plan.reason || "RESERVED_CELL",
+            layerId: plan.island != null ? plan.island.layerId : null
+        })
+
+        modfusionControllerFinishActiveJob()
+        return
+    }
+
+    if(plan.status === "SKIPPED")
+    {
+        modfusionControllerWriteState(level, job.cell, {
+            status: "SKIPPED",
+            reason: plan.reason || "PLANNER_SKIPPED",
+            layerId: plan.island != null ? plan.island.layerId : null
+        })
+
+        modfusionControllerFinishActiveJob()
+        return
+    }
+
+    if(plan.status !== "PLANNED")
+    {
+        modfusionControllerFinishActiveJob()
+        return
+    }
+
+    if(
+        global.ModfusionBuildingGeneration == null ||
+        typeof global.ModfusionBuildingGeneration.getAdapter !== "function" ||
+        typeof global.ModfusionBuildingGeneration.prepare !== "function" ||
+        typeof global.ModfusionBuildingGeneration.place !== "function"
+    )
+    {
+        modfusionControllerFinishActiveJob()
         return
     }
 
     var adapter = global.ModfusionBuildingGeneration.getAdapter(
-        plan.building.placement.adapterId
+        plan.placement.adapterId
     )
 
     if(adapter == null)
     {
-        blockModfusionControllerSessionCell(job, "UNKNOWN_ADAPTER")
-        return
-    }
-
-    if(
-        adapter.exactY !== true &&
-        MODFUSION_CONTROLLER_CONFIG.allowInexactYAdapters !== true
-    )
-    {
-        blockModfusionControllerSessionCell(
-            job,
-            "INEXACT_Y_ADAPTER_BLOCKED"
-        )
-        return
-    }
-
-    var candidates = global.ModfusionBuildingDistributor.getCandidates(plan)
-
-    if(!Array.isArray(candidates) || candidates.length <= 0)
-    {
-        failModfusionControllerCell(
+        modfusionControllerWritePlanState(
             level,
-            job,
-            "NO_VALID_SITE",
-            "NO_CANDIDATES"
+            plan,
+            "FAILED",
+            "UNKNOWN_ADAPTER"
         )
+
+        modfusionControllerFinishActiveJob()
         return
     }
 
-    job.plan = plan
-    job.candidates = candidates
-    job.candidateIndex = 0
-    job.phase = "ANALYZE"
-}
-
-
-function processModfusionControllerAnalyze(level, job)
-{
-    if(job.candidateIndex >= job.candidates.length)
-    {
-        failModfusionControllerCell(
-            level,
-            job,
-            "NO_VALID_SITE",
-            "NO_VALID_SITE"
-        )
-        return
-    }
-
-    var candidate = job.candidates[job.candidateIndex]
-
-    try
-    {
-        /* Only the center chunk is explicitly loaded for analysis. */
-        level.getChunk(candidate.chunkX, candidate.chunkZ)
-    }
-    catch(error)
-    {
-        job.analysisFailures.push({
-            attempt: candidate.attempt,
-            reason: "CANDIDATE_CHUNK_LOAD_FAILED"
-        })
-
-        job.candidateIndex++
-        return
-    }
-
-    var analysis = global.ModfusionBuildingAnalyzer.analyzeInLayer(
+    var preparation = global.ModfusionBuildingGeneration.prepare(
         level,
-        job.plan.buildingId,
-        candidate.x,
-        candidate.z,
-        job.plan.layerId,
-        false
+        plan
     )
 
-    if(analysis == null || analysis.pass !== true)
+    if(preparation == null || preparation.prepared !== true)
     {
-        job.analysisFailures.push({
-            attempt: candidate.attempt,
-            reason: analysis != null ? analysis.reason : "NULL_ANALYSIS"
-        })
+        var preparationFailure = preparation != null
+            ? preparation.reason
+            : "NULL_PREPARATION_RESULT"
 
-        job.candidateIndex++
+        modfusionControllerWritePlanState(
+            level,
+            plan,
+            "FAILED",
+            preparationFailure
+        )
+
+        console.error(
+            "[ModFusion Building Controller] PREPARATION FAILED cell " +
+            job.key + " -> " + plan.buildingId + " / " +
+            preparationFailure +
+            (
+                preparation != null && preparation.detail != null
+                    ? " / " + preparation.detail
+                    : ""
+            )
+        )
+
+        modfusionControllerFinishActiveJob()
         return
     }
 
-    job.resolved = {
-        schemaVersion: job.plan.schemaVersion,
-        status: "OK",
-        ready: true,
-        reason: null,
-        seedKey: job.plan.seedKey,
-        cellKey: job.plan.cellKey,
-        cell: job.plan.cell,
-        layerId: job.plan.layerId,
-        buildingId: job.plan.buildingId,
-        building: job.plan.building,
-        candidate: candidate,
-        analysis: analysis,
-        attempts: job.analysisFailures.slice(0)
-    }
+    plan.placement.footprint = preparation.footprint
 
-    var radius = resolveModfusionControllerPreloadRadius(
-        job.plan.building
-    )
+    var readiness = getModfusionControllerFootprintReadiness(level, plan)
 
-    job.preloadChunks = createModfusionControllerPreloadChunks(
-        candidate.chunkX,
-        candidate.chunkZ,
-        radius
-    )
-    job.preloadIndex = 0
-    job.phase = "PRELOAD"
-}
-
-
-function processModfusionControllerPreload(level, job)
-{
-    var loaded = 0
-
-    while(
-        loaded < MODFUSION_CONTROLLER_CONFIG.chunksPerWorkerStep &&
-        job.preloadIndex < job.preloadChunks.length
-    )
+    if(!readiness.ready)
     {
-        var chunk = job.preloadChunks[job.preloadIndex]
-
-        try
+        if(
+            readiness.reason !== "FOOTPRINT_NOT_LOADED" &&
+            readiness.reason !== "CHUNK_READINESS_EXCEPTION"
+        )
         {
-            level.getChunk(chunk.x, chunk.z)
-        }
-        catch(error)
-        {
-            failModfusionControllerCell(
+            modfusionControllerWritePlanState(
                 level,
-                job,
-                "PLACE_FAILED",
-                "PLACEMENT_CHUNK_LOAD_FAILED"
+                plan,
+                "FAILED",
+                readiness.reason
             )
-            return
         }
 
-        job.preloadIndex++
-        loaded++
+        modfusionControllerFinishActiveJob()
+        return
     }
 
-    if(job.preloadIndex >= job.preloadChunks.length)
-    {
-        job.phase = "PLACE"
-    }
-}
-
-
-function processModfusionControllerPlace(level, job)
-{
-    var state = getModfusionControllerCellState(
+    state = getModfusionControllerState(
         level,
         job.cell.x,
         job.cell.z
     )
 
-    if(isModfusionControllerTerminalState(state.status))
+    if(modfusionControllerIsTerminalState(state.status))
     {
-        finishModfusionControllerActiveJob()
+        modfusionControllerFinishActiveJob()
         return
     }
 
-    var generation = global.ModfusionBuildingGeneration.placeResolved(
+    if(!modfusionControllerWritePlanState(
         level,
-        job.resolved,
-        {}
+        plan,
+        "PLACING",
+        "PLACEMENT_IN_PROGRESS"
+    ))
+    {
+        console.error(
+            "[ModFusion Building Controller] Refusing to place cell " +
+            job.key + " because PLACING state could not be saved"
+        )
+
+        modfusionControllerFinishActiveJob()
+        return
+    }
+
+    var generation = global.ModfusionBuildingGeneration.place(
+        level,
+        plan,
+        preparation
     )
 
     if(generation == null || generation.generated !== true)
     {
-        failModfusionControllerCell(
+        var failureReason = generation != null
+            ? generation.reason
+            : "NULL_GENERATION_RESULT"
+
+        modfusionControllerWritePlanState(
             level,
-            job,
-            "PLACE_FAILED",
-            generation != null ? generation.reason : "NULL_GENERATION_RESULT"
+            plan,
+            "FAILED",
+            failureReason
         )
+
+        console.error(
+            "[ModFusion Building Controller] FAILED cell " + job.key +
+            " -> " + plan.buildingId + " / " + failureReason +
+            (
+                generation != null && generation.detail != null
+                    ? " / " + generation.detail
+                    : ""
+            )
+        )
+
+        modfusionControllerFinishActiveJob()
         return
     }
 
-    var center = job.resolved.analysis.center
-
-    var stateWritten = writeModfusionControllerCellState(
+    var stateWritten = modfusionControllerWriteState(
         level,
-        job.cell,
+        plan.cell,
         {
             status: "GENERATED",
             reason: "",
             buildingId: generation.buildingId,
             targetId: generation.targetId,
-            layerId: job.resolved.layerId,
-            x: center.x,
-            y: center.y,
-            z: center.z,
-            attempt: job.resolved.candidate.attempt,
+            layerId: plan.island.layerId,
+            x: generation.requestedX,
+            y: generation.requestedY,
+            z: generation.requestedZ,
             exactY: generation.exactY === true
         }
     )
 
     if(!stateWritten)
     {
-        console.log(
-            "[ModFusion Controller] CRITICAL: Structure generated but " +
-            "state write failed for cell " + job.key
+        console.error(
+            "[ModFusion Building Controller] CRITICAL: Structure was " +
+            "placed but GENERATED state could not be saved for cell " +
+            job.key + ". PLACING state must be treated as ambiguous."
         )
 
-        blockModfusionControllerSessionCell(
-            job,
-            "GENERATED_STATE_WRITE_FAILED"
-        )
+        modfusionControllerFinishActiveJob()
         return
     }
 
     console.log(
-        "[ModFusion Controller] GENERATED cell " + job.key +
+        "[ModFusion Building Controller] GENERATED cell " + job.key +
         " -> " + generation.buildingId +
-        " at " + center.x + " " + center.y + " " + center.z
+        " at requested position " + generation.requestedX + " " +
+        generation.requestedY + " " + generation.requestedZ
     )
 
-    finishModfusionControllerActiveJob()
+    modfusionControllerFinishActiveJob()
 }
 
 
 function processModfusionControllerWorker(server)
 {
-    if(MODFUSION_CONTROLLER_CONFIG.enabled !== true || server == null)
+    if(
+        MODFUSION_BUILDING_CONTROLLER_CONFIG.enabled !== true ||
+        server == null
+    )
     {
         return
     }
 
-    var level
-
-    try
-    {
-        level = server.getLevel(MODFUSION_CONTROLLER_DIMENSION_ID)
-    }
-    catch(error)
-    {
-        return
-    }
+    var level = modfusionControllerGetLevel(server)
 
     if(level == null)
     {
         return
     }
 
-    if(MODFUSION_CONTROLLER_ACTIVE_JOB == null)
+    if(MODFUSION_BUILDING_CONTROLLER_ACTIVE == null)
     {
-        if(MODFUSION_CONTROLLER_QUEUE.length <= 0)
+        if(MODFUSION_BUILDING_CONTROLLER_QUEUE.length <= 0)
         {
             return
         }
 
-        MODFUSION_CONTROLLER_ACTIVE_JOB = MODFUSION_CONTROLLER_QUEUE.shift()
+        MODFUSION_BUILDING_CONTROLLER_ACTIVE =
+            MODFUSION_BUILDING_CONTROLLER_QUEUE.shift()
     }
 
-    var job = MODFUSION_CONTROLLER_ACTIVE_JOB
-
-    if(job.phase === "PLAN")
+    try
     {
-        processModfusionControllerPlan(level, job)
-        return
+        processModfusionControllerJob(
+            level,
+            MODFUSION_BUILDING_CONTROLLER_ACTIVE
+        )
     }
-
-    if(job.phase === "ANALYZE")
+    catch(error)
     {
-        processModfusionControllerAnalyze(level, job)
-        return
-    }
+        var key = MODFUSION_BUILDING_CONTROLLER_ACTIVE != null
+            ? MODFUSION_BUILDING_CONTROLLER_ACTIVE.key
+            : "unknown"
 
-    if(job.phase === "PRELOAD")
-    {
-        processModfusionControllerPreload(level, job)
-        return
-    }
+        console.error(
+            "[ModFusion Building Controller] Worker exception for cell " +
+            key + " - " + error
+        )
 
-    if(job.phase === "PLACE")
-    {
-        processModfusionControllerPlace(level, job)
-        return
-    }
+        if(error != null && error.stack != null)
+        {
+            console.error(String(error.stack))
+        }
 
-    blockModfusionControllerSessionCell(job, "UNKNOWN_JOB_PHASE")
+        /*
+         * If PLACING was already persisted, it remains terminal and blocks
+         * an unsafe automatic duplicate. Otherwise the cell can be scanned
+         * again after this in-memory job is released.
+         */
+        modfusionControllerFinishActiveJob()
+    }
 }
 
 
@@ -1157,6 +1497,7 @@ function processModfusionControllerWorker(server)
  * =========================================================
  */
 
+
 function scanModfusionControllerPlayer(player, level)
 {
     if(
@@ -1164,139 +1505,348 @@ function scanModfusionControllerPlayer(player, level)
         level == null ||
         modfusionControllerIsClientLevel(level) ||
         modfusionControllerGetDimensionId(level) !==
-            MODFUSION_CONTROLLER_DIMENSION_ID
+            MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID
     )
     {
         return
     }
+
+    enqueueModfusionControllerAtBlock(
+        level,
+        Math.floor(player.getX()),
+        Math.floor(player.getZ()),
+        "PLAYER_SCAN"
+    )
+}
+
+
+/*
+ * =========================================================
+ * Command helpers
+ * =========================================================
+ */
+
+
+function modfusionControllerGetCommandPlayer(context)
+{
+    try
+    {
+        return context.getSource().getPlayerOrException()
+    }
+    catch(error)
+    {
+        context.getSource().sendFailure(
+            Component.of("该命令只能由玩家执行。")
+        )
+
+        return null
+    }
+}
+
+
+function modfusionControllerGetPlayerCell(player)
+{
+    if(
+        player == null ||
+        global.ModfusionBuildingPlanner == null
+    )
+    {
+        return null
+    }
+
+    try
+    {
+        return global.ModfusionBuildingPlanner.getCellAtBlock(
+            Math.floor(player.getX()),
+            Math.floor(player.getZ())
+        )
+    }
+    catch(error)
+    {
+        return null
+    }
+}
+
+
+function showModfusionControllerStatus(context)
+{
+    var player = modfusionControllerGetCommandPlayer(context)
+
+    if(player == null)
+    {
+        return 0
+    }
+
+    var level = player.level
 
     if(
-        global.ModfusionBuildingDistributor == null ||
-        typeof global.ModfusionBuildingDistributor.getCellAtBlock !== "function"
+        modfusionControllerGetDimensionId(level) !==
+        MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID
     )
     {
-        return
+        modfusionControllerTell(player, "§c请在融合维度中执行该命令。")
+        return 0
     }
 
-    var cell = global.ModfusionBuildingDistributor.getCellAtBlock(
-        Math.floor(player.x),
-        Math.floor(player.z)
-    )
+    var cell = modfusionControllerGetPlayerCell(player)
 
     if(cell == null)
     {
-        return
+        modfusionControllerTell(player, "§c无法计算当前建筑网格。")
+        return 0
     }
 
-    var playerKey = modfusionControllerGetPlayerKey(player)
+    var state = getModfusionControllerState(level, cell.x, cell.z)
+    var plan = modfusionControllerCreatePlan(level, cell)
+    var queue = getModfusionControllerQueueStatus()
 
-    if(playerKey == null)
-    {
-        return
-    }
-
-    var cellKey = getModfusionControllerCellQueueKey(cell)
-
-    if(MODFUSION_CONTROLLER_PLAYER_CELLS[playerKey] === cellKey)
-    {
-        return
-    }
-
-    MODFUSION_CONTROLLER_PLAYER_CELLS[playerKey] = cellKey
-
-    enqueueModfusionControllerCell(
-        level,
-        cell.x,
-        cell.z,
-        "PLAYER_CELL_CHANGE"
+    modfusionControllerTell(
+        player,
+        "§b[ModFusion Building] 网格 " + cell.key +
+        "，状态 " + state.status +
+        (state.reason.length > 0 ? "，原因 " + state.reason : "")
     )
-}
 
-
-/*
- * =========================================================
- * Reset and inspection helpers
- * =========================================================
- */
-
-function resetModfusionControllerCell(level, cellX, cellZ)
-{
-    var cell = global.ModfusionBuildingDistributor != null
-        ? global.ModfusionBuildingDistributor.getCell(cellX, cellZ)
-        : null
-
-    if(level == null || cell == null)
+    if(plan != null && plan.status === "PLANNED")
     {
-        return false
-    }
+        var preparation = null
 
-    var key = getModfusionControllerCellQueueKey(cell)
-
-    clearModfusionControllerCellState(level, cell.x, cell.z)
-    delete MODFUSION_CONTROLLER_SESSION_BLOCKED[key]
-
-    var filtered = []
-    var i
-
-    for(i = 0; i < MODFUSION_CONTROLLER_QUEUE.length; i++)
-    {
-        if(MODFUSION_CONTROLLER_QUEUE[i].key !== key)
+        if(
+            global.ModfusionBuildingGeneration != null &&
+            typeof global.ModfusionBuildingGeneration.prepare === "function"
+        )
         {
-            filtered.push(MODFUSION_CONTROLLER_QUEUE[i])
+            preparation = global.ModfusionBuildingGeneration.prepare(
+                level,
+                plan
+            )
+
+            if(
+                preparation != null &&
+                preparation.prepared === true &&
+                preparation.footprint != null
+            )
+            {
+                plan.placement.footprint = preparation.footprint
+            }
+        }
+
+        var readiness = getModfusionControllerFootprintReadiness(
+            level,
+            plan
+        )
+
+        modfusionControllerTell(
+            player,
+            "§7规划建筑 " + plan.buildingId +
+            "，岛屿半径 " +
+            (Math.round(plan.island.radius * 10) / 10) +
+            "，坐标 " + plan.placement.x + " " +
+            plan.placement.y + " " + plan.placement.z
+        )
+
+        if(preparation != null && preparation.prepared === true)
+        {
+            modfusionControllerTell(
+                player,
+                "§7真实范围 Y=" + preparation.bounds.minY + ".." +
+                preparation.bounds.maxY + "，区块 X=" +
+                preparation.footprint.minChunkX + ".." +
+                preparation.footprint.maxChunkX + " Z=" +
+                preparation.footprint.minChunkZ + ".." +
+                preparation.footprint.maxChunkZ
+            )
+
+            if(readiness.ready)
+            {
+                modfusionControllerTell(
+                    player,
+                    "§a真实占地区块已全部加载。"
+                )
+            }
+            else if(readiness.reason === "FOOTPRINT_NOT_LOADED")
+            {
+                modfusionControllerTell(
+                    player,
+                    "§e真实占地区块尚缺 " + readiness.missing +
+                    "/" + readiness.total + " 个。"
+                )
+            }
+            else
+            {
+                modfusionControllerTell(
+                    player,
+                    "§c真实占地检查失败：" + readiness.reason
+                )
+            }
+        }
+        else
+        {
+            modfusionControllerTell(
+                player,
+                "§c结构预计算失败：" +
+                (
+                    preparation != null
+                        ? preparation.reason
+                        : "GENERATION_ADAPTER_UNAVAILABLE"
+                )
+            )
         }
     }
-
-    MODFUSION_CONTROLLER_QUEUE = filtered
-    delete MODFUSION_CONTROLLER_QUEUED_CELLS[key]
-
-    if(
-        MODFUSION_CONTROLLER_ACTIVE_JOB != null &&
-        MODFUSION_CONTROLLER_ACTIVE_JOB.key === key
-    )
+    else if(plan != null)
     {
-        MODFUSION_CONTROLLER_ACTIVE_JOB = null
+        modfusionControllerTell(
+            player,
+            "§7规划结果 " + plan.status +
+            (plan.reason != null ? " / " + plan.reason : "")
+        )
     }
 
-    return true
+    modfusionControllerTell(
+        player,
+        "§7队列 " + queue.queued +
+        "，当前任务 " +
+        (queue.active != null ? queue.active.key : "无")
+    )
+
+    if(state.status === "PLACING")
+    {
+        modfusionControllerTell(
+            player,
+            "§c该网格曾在放置途中被中断；为防止重复，不会自动重试。"
+        )
+    }
+
+    if(
+        state.status === "FAILED" &&
+        state.reason === "PLACE_COMMAND_FAILED"
+    )
+    {
+        modfusionControllerTell(
+            player,
+            "§e这是旧版命令放置失败记录；玩家扫描会自动清除并重新排队。"
+        )
+    }
+
+    modfusionControllerTell(
+        player,
+        "§8status 只显示状态；生成由玩家扫描或 enqueue 命令触发。"
+    )
+
+    return 1
+}
+
+
+function enqueueModfusionControllerCommand(context)
+{
+    var player = modfusionControllerGetCommandPlayer(context)
+
+    if(player == null)
+    {
+        return 0
+    }
+
+    var result = enqueueModfusionControllerAtBlock(
+        player.level,
+        Math.floor(player.getX()),
+        Math.floor(player.getZ()),
+        "MANUAL_COMMAND"
+    )
+
+    modfusionControllerTell(
+        player,
+        result.queued
+            ? "§a当前网格已加入建筑队列。"
+            : "§e未加入队列：" + result.reason
+    )
+
+    return result.queued ? 1 : 0
+}
+
+
+function retryModfusionControllerCommand(context)
+{
+    var player = modfusionControllerGetCommandPlayer(context)
+
+    if(player == null)
+    {
+        return 0
+    }
+
+    if(
+        modfusionControllerGetDimensionId(player.level) !==
+        MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID
+    )
+    {
+        modfusionControllerTell(player, "§c请在融合维度中执行该命令。")
+        return 0
+    }
+
+    var cell = modfusionControllerGetPlayerCell(player)
+
+    if(cell == null)
+    {
+        modfusionControllerTell(player, "§c无法计算当前建筑网格。")
+        return 0
+    }
+
+    var result = retryModfusionControllerCell(
+        player.level,
+        cell.x,
+        cell.z,
+        "MANUAL_RETRY"
+    )
+
+    modfusionControllerTell(
+        player,
+        result.queued
+            ? "§a失败状态已清除，当前网格已重新加入队列。"
+            : "§e无法重试：" + result.reason
+    )
+
+    if(result.queued)
+    {
+        modfusionControllerTell(
+            player,
+            "§e请先确认上次失败没有留下部分结构。"
+        )
+    }
+
+    return result.queued ? 1 : 0
 }
 
 
 /*
  * =========================================================
- * Public API
+ * Public API and events
  * =========================================================
  */
+
 
 validateModfusionControllerConfig()
 
 
 global.ModfusionBuildingController = {
-    schemaVersion: MODFUSION_CONTROLLER_SCHEMA_VERSION,
+    schemaVersion: MODFUSION_BUILDING_CONTROLLER_SCHEMA_VERSION,
 
     getConfig: getModfusionControllerConfig,
-    getState: getModfusionControllerCellState,
+    getState: getModfusionControllerState,
     getQueueStatus: getModfusionControllerQueueStatus,
+    getFootprintReadiness: getModfusionControllerFootprintReadiness,
 
     enqueueCell: enqueueModfusionControllerCell,
     enqueueAtBlock: enqueueModfusionControllerAtBlock,
-    resetCell: resetModfusionControllerCell
+    retryCell: retryModfusionControllerCell
 }
 
 
-/*
- * Small player-side discovery gate. No terrain scan runs here.
- */
-
 PlayerEvents.tick(function(event)
 {
-    if(MODFUSION_CONTROLLER_CONFIG.enabled !== true)
-    {
-        return
-    }
-
     if(
-        MODFUSION_CONTROLLER_TICK %
-        MODFUSION_CONTROLLER_CONFIG.playerScanIntervalTicks !== 0
+        MODFUSION_BUILDING_CONTROLLER_CONFIG.enabled !== true ||
+        MODFUSION_BUILDING_CONTROLLER_TICK %
+            MODFUSION_BUILDING_CONTROLLER_CONFIG
+                .playerScanIntervalTicks !== 0
     )
     {
         return
@@ -1306,18 +1856,14 @@ PlayerEvents.tick(function(event)
 })
 
 
-/*
- * One bounded queue step. When the queue is empty this performs no world
- * access and returns immediately.
- */
-
 ServerEvents.tick(function(event)
 {
-    MODFUSION_CONTROLLER_TICK++
+    MODFUSION_BUILDING_CONTROLLER_TICK++
 
     if(
-        MODFUSION_CONTROLLER_TICK %
-        MODFUSION_CONTROLLER_CONFIG.workerIntervalTicks !== 0
+        MODFUSION_BUILDING_CONTROLLER_TICK %
+            MODFUSION_BUILDING_CONTROLLER_CONFIG
+                .workerIntervalTicks !== 0
     )
     {
         return
@@ -1327,162 +1873,39 @@ ServerEvents.tick(function(event)
 })
 
 
-/*
- * Read-only status for the player's current distribution cell:
- *
- *   /kubejs custom_command modfusion_building_status
- */
+ServerEvents.commandRegistry(function(event)
+{
+    var Commands = event.commands
 
-ServerEvents.customCommand(
-    "modfusion_building_status",
-    function(event)
-    {
-        var player = event.player
-
-        if(player == null)
-        {
-            return
-        }
-
-        var level = player.level
-
-        if(
-            modfusionControllerGetDimensionId(level) !==
-            MODFUSION_CONTROLLER_DIMENSION_ID
-        )
-        {
-            modfusionControllerTell(player, "Wrong dimension")
-            return
-        }
-
-        var cell = global.ModfusionBuildingDistributor.getCellAtBlock(
-            Math.floor(player.x),
-            Math.floor(player.z)
-        )
-
-        var state = getModfusionControllerCellState(
-            level,
-            cell.x,
-            cell.z
-        )
-
-        var key = getModfusionControllerCellQueueKey(cell)
-        var queue = getModfusionControllerQueueStatus()
-
-        modfusionControllerTell(
-            player,
-            "Cell " + key + " / state " + state.status +
-            (state.reason.length > 0 ? " / " + state.reason : "")
-        )
-
-        if(state.buildingId.length > 0)
-        {
-            modfusionControllerTell(
-                player,
-                "Building " + state.buildingId +
-                " / layer " + state.layerId +
-                " / position " + state.x + " " + state.y + " " + state.z
+    event.register(
+        Commands
+            .literal("modfusion_building")
+            .requires(function(source)
+            {
+                return source.hasPermission(2)
+            })
+            .then(
+                Commands
+                    .literal("status")
+                    .executes(showModfusionControllerStatus)
             )
-        }
-
-        if(modfusionControllerHasOwn(MODFUSION_CONTROLLER_SESSION_BLOCKED, key))
-        {
-            modfusionControllerTell(
-                player,
-                "Session blocked: " +
-                MODFUSION_CONTROLLER_SESSION_BLOCKED[key]
+            .then(
+                Commands
+                    .literal("enqueue")
+                    .executes(enqueueModfusionControllerCommand)
             )
-        }
-
-        modfusionControllerTell(
-            player,
-            "Queue " + queue.queued +
-            " / active " +
-            (queue.active != null
-                ? queue.active.cell.x + ":" + queue.active.cell.z +
-                    " " + queue.active.phase
-                : "none")
-        )
-    }
-)
-
-
-/*
- * Manually enqueue the current cell without changing persistent state:
- *
- *   /kubejs custom_command modfusion_building_enqueue
- */
-
-ServerEvents.customCommand(
-    "modfusion_building_enqueue",
-    function(event)
-    {
-        var player = event.player
-
-        if(player == null)
-        {
-            return
-        }
-
-        var result = enqueueModfusionControllerAtBlock(
-            player.level,
-            Math.floor(player.x),
-            Math.floor(player.z),
-            "MANUAL_COMMAND"
-        )
-
-        modfusionControllerTell(
-            player,
-            result.queued
-                ? "Current cell queued"
-                : "Not queued: " + result.reason
-        )
-    }
-)
-
-
-/*
- * Remove Controller state for the current cell. This does not remove an
- * existing structure; enqueueing afterward may create a duplicate.
- *
- *   /kubejs custom_command modfusion_building_reset_cell
- */
-
-ServerEvents.customCommand(
-    "modfusion_building_reset_cell",
-    function(event)
-    {
-        var player = event.player
-
-        if(player == null)
-        {
-            return
-        }
-
-        var cell = global.ModfusionBuildingDistributor.getCellAtBlock(
-            Math.floor(player.x),
-            Math.floor(player.z)
-        )
-
-        var reset = resetModfusionControllerCell(
-            player.level,
-            cell.x,
-            cell.z
-        )
-
-        modfusionControllerTell(
-            player,
-            reset
-                ? "Current cell state reset. Existing blocks were not removed."
-                : "Current cell reset failed"
-        )
-    }
-)
+            .then(
+                Commands
+                    .literal("retry")
+                    .executes(retryModfusionControllerCommand)
+            )
+    )
+})
 
 
 console.log(
-    "[ModFusion Controller] Controller v3 ready. " +
-    "Enabled=" + MODFUSION_CONTROLLER_CONFIG.enabled +
-    ", allowInexactY=" +
-    MODFUSION_CONTROLLER_CONFIG.allowInexactYAdapters
+    "[ModFusion Building Controller] Controller v2 ready. " +
+    "Enabled=" + MODFUSION_BUILDING_CONTROLLER_CONFIG.enabled +
+    ", scanInterval=" +
+    MODFUSION_BUILDING_CONTROLLER_CONFIG.playerScanIntervalTicks
 )

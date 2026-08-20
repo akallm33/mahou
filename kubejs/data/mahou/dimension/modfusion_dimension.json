@@ -8,12 +8,11 @@
       "type": "minecraft:multi_noise",
 
       "biomes": [
-
         {
           "parameters": {
-            "temperature": 0.6,
-            "humidity": -0.4,
-            "continentalness": -0.55,
+            "temperature": [-1.0, -0.3],
+            "humidity": 0.0,
+            "continentalness": 0.0,
             "erosion": 0.0,
             "weirdness": 0.0,
             "depth": 0.0,
@@ -24,9 +23,9 @@
 
         {
           "parameters": {
-            "temperature": 0.1,
-            "humidity": 0.7,
-            "continentalness": -0.55,
+            "temperature": [-0.3, 0.3],
+            "humidity": 0.0,
+            "continentalness": 0.0,
             "erosion": 0.0,
             "weirdness": 0.0,
             "depth": 0.0,
@@ -35,13 +34,12 @@
           "biome": "mahou:vanilla/forest"
         },
 
-
         {
           "parameters": {
-            "temperature": 0.0,
-            "humidity": 0.2,
-            "continentalness": 0.55,
-            "erosion": -0.65,
+            "temperature": [0.3, 0.8],
+            "humidity": 0.0,
+            "continentalness": 0.0,
+            "erosion": 0.0,
             "weirdness": 0.0,
             "depth": 0.0,
             "offset": 0.0
@@ -51,19 +49,18 @@
 
         {
           "parameters": {
-            "temperature": 0.35,
-            "humidity": 0.55,
-            "continentalness": 0.55,
-            "erosion": -0.20,
-            "weirdness": -0.50,
+            "temperature": [0.8, 1.0],
+            "humidity": 0.0,
+            "continentalness": 0.0,
+            "erosion": 0.0,
+            "weirdness": 0.0,
             "depth": 0.0,
             "offset": 0.0
           },
           "biome": "mahou:modded/twilightforest/mushroom_forest"
         }
-        
-        ]
-      },
+      ]
+    },
 
     "settings": "mahou:modfusion_floating_islands"
   }

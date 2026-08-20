@@ -1,0 +1,43 @@
+{
+  "type": "minecraft:cache_2d",
+  "argument": {
+    "type": "moredfs:shift",
+    "argument": {
+      "type": "moredfs:voronoi_cells",
+      "value_sampler": {
+        "type": "beta",
+        "alpha": 1.0,
+        "beta": 1.0
+      },
+      "size_x": 768,
+      "size_y": 0,
+      "size_z": 768,
+      "jitter_sampler": {
+        "x": {
+          "type": "uniform",
+          "min": 146.0,
+          "max": 622.0
+        },
+        "y": {
+          "type": "uniform",
+          "min": 0.0,
+          "max": 1.0
+        },
+        "z": {
+          "type": "uniform",
+          "min": 146.0,
+          "max": 622.0
+        }
+      },
+      "distance_metric": {
+        "type": "euclidean"
+      },
+      "distance_type": "f1",
+      "exact": false,
+      "salt": 104729
+    },
+    "shift_x": 384.0,
+    "shift_y": 0.0,
+    "shift_z": 384.0
+  }
+}

@@ -7,7 +7,7 @@
     "argument1": {
       "type": "minecraft:add",
 
-      "argument1": 128.0,
+      "argument1": "mahou:middle_grid_radius",
 
       "argument2": {
         "type": "minecraft:mul",
