@@ -23,7 +23,7 @@ var MODFUSION_BUILDING_CONTROLLER_DIMENSION_ID =
     "mahou:modfusion_dimension"
 
 var MODFUSION_BUILDING_CONTROLLER_STATE_PREFIX =
-    "mahouModfusionBuildingControllerV1"
+    "mahouModfusionBuildingControllerV2"
 
 var MODFUSION_BUILDING_CONTROLLER_CONFIG = {
     enabled: true,
@@ -41,6 +41,10 @@ var MODFUSION_BUILDING_CONTROLLER_CONFIG = {
 
 var MODFUSION_CONTROLLER_ResourceLocation = Java.loadClass(
     "net.minecraft.resources.ResourceLocation"
+)
+
+var MODFUSION_CONTROLLER_BlockPos = Java.loadClass(
+    "net.minecraft.core.BlockPos"
 )
 
 var MODFUSION_CONTROLLER_MDF_SEED_HOLDER_CLASS_NAME =
@@ -233,6 +237,95 @@ function modfusionControllerGetSeedText(level)
         )
 
         return null
+    }
+}
+
+function modfusionControllerGetLoadedIslandBiome(level, island)
+{
+    if(
+        level == null ||
+        island == null
+    )
+    {
+        return {
+            ready: false,
+            reason: "ISLAND_UNAVAILABLE",
+            biomeId: null
+        }
+    }
+
+    var blockX = Math.floor(Number(island.blockX))
+    var blockY = Math.floor(Number(island.surfaceY))
+    var blockZ = Math.floor(Number(island.blockZ))
+
+    if(
+        !isFinite(blockX) ||
+        !isFinite(blockY) ||
+        !isFinite(blockZ)
+    )
+    {
+        return {
+            ready: false,
+            reason: "INVALID_ISLAND_CENTER",
+            biomeId: null
+        }
+    }
+
+    var chunkX = Math.floor(blockX / 16)
+    var chunkZ = Math.floor(blockZ / 16)
+
+    /*
+     * 不主动加载或生成区块。
+     * 只有岛屿中心区块已经加载时才读取群系。
+     */
+    if(level.hasChunk(chunkX, chunkZ) !== true)
+    {
+        return {
+            ready: false,
+            reason: "ISLAND_CENTER_CHUNK_NOT_LOADED",
+            biomeId: null,
+            chunkX: chunkX,
+            chunkZ: chunkZ
+        }
+    }
+
+    try
+    {
+        var holder = level.getBiome(
+            new MODFUSION_CONTROLLER_BlockPos(
+                blockX,
+                blockY,
+                blockZ
+            )
+        )
+
+        var optionalKey = holder.unwrapKey()
+
+        if(optionalKey.isPresent() !== true)
+        {
+            return {
+                ready: false,
+                reason: "BIOME_KEY_UNAVAILABLE",
+                biomeId: null
+            }
+        }
+
+        return {
+            ready: true,
+            reason: null,
+            biomeId: String(optionalKey.get().location()),
+            chunkX: chunkX,
+            chunkZ: chunkZ
+        }
+    }
+    catch(error)
+    {
+        return {
+            ready: false,
+            reason: "BIOME_LOOKUP_EXCEPTION",
+            biomeId: null,
+            detail: String(error)
+        }
     }
 }
 
@@ -751,6 +844,43 @@ function enqueueModfusionControllerAtBlock(level, blockX, blockZ, source)
     )
 }
 
+function enqueueModfusionControllerLoadedChunk(
+    server,
+    chunkX,
+    chunkZ
+)
+{
+    var x = modfusionControllerReadInteger(chunkX)
+    var z = modfusionControllerReadInteger(chunkZ)
+
+    if(x == null || z == null)
+    {
+        return {
+            queued: false,
+            reason: "INVALID_CHUNK_COORDINATES"
+        }
+    }
+
+    var level = modfusionControllerGetLevel(server)
+
+    if(level == null)
+    {
+        return {
+            queued: false,
+            reason: "DIMENSION_NOT_LOADED"
+        }
+    }
+
+    /*
+     * 使用区块中心坐标确定它属于哪个岛屿网格。
+     */
+    return enqueueModfusionControllerAtBlock(
+        level,
+        x * 16 + 8,
+        z * 16 + 8,
+        "CHUNK_LOAD"
+    )
+}
 
 function modfusionControllerFinishActiveJob()
 {
@@ -870,7 +1000,8 @@ function modfusionControllerCreatePlan(level, cell)
 {
     if(
         global.ModfusionBuildingPlanner == null ||
-        typeof global.ModfusionBuildingPlanner.plan !== "function"
+        typeof global.ModfusionBuildingPlanner.plan !== "function" ||
+        typeof global.ModfusionBuildingPlanner.getIsland !== "function"
     )
     {
         return {
@@ -892,10 +1023,47 @@ function modfusionControllerCreatePlan(level, cell)
     try
     {
         var startedAt = Date.now()
-        var plan = global.ModfusionBuildingPlanner.plan(
+
+        /*
+         * 先只计算岛屿中心，不读取和生成区块。
+         */
+        var island = global.ModfusionBuildingPlanner.getIsland(
             seedText,
             cell.x,
             cell.z
+        )
+
+        /*
+         * 读取Minecraft实际分配给岛屿中心的群系。
+         */
+        var biomeResult = modfusionControllerGetLoadedIslandBiome(
+            level,
+            island
+        )
+
+        /*
+         * 中心区块还没有加载时先等待。
+         * 玩家靠近后，定期扫描会重新加入任务。
+         */
+        if(biomeResult.ready !== true)
+        {
+            return {
+                status: "WAITING",
+                reason: biomeResult.reason,
+                detail: biomeResult.detail,
+                cell: cell,
+                island: island
+            }
+        }
+
+        /*
+         * 把实际群系传给Planner。
+         */
+        var plan = global.ModfusionBuildingPlanner.plan(
+            seedText,
+            cell.x,
+            cell.z,
+            biomeResult.biomeId
         )
 
         var elapsedMillis = Date.now() - startedAt
@@ -1638,6 +1806,17 @@ function showModfusionControllerStatus(context)
 
         modfusionControllerTell(
             player,
+            "§7实际群系 " + plan.island.biomeId +
+            (plan.island.predictedBiomeId != null &&
+            plan.island.predictedBiomeId !== plan.island.biomeId
+            ? "，原推算群系 " +
+            plan.island.predictedBiomeId
+            : ""
+            )
+        )
+
+        modfusionControllerTell(
+            player,
             "§7规划建筑 " + plan.buildingId +
             "，岛屿半径 " +
             (Math.round(plan.island.radius * 10) / 10) +
@@ -1680,18 +1859,49 @@ function showModfusionControllerStatus(context)
                 )
             }
         }
-        else
-        {
-            modfusionControllerTell(
-                player,
-                "§c结构预计算失败：" +
-                (
-                    preparation != null
-                        ? preparation.reason
-                        : "GENERATION_ADAPTER_UNAVAILABLE"
-                )
+else
+{
+    var failureReason =
+        preparation != null
+            ? preparation.reason
+            : "GENERATION_ADAPTER_UNAVAILABLE"
+
+    modfusionControllerTell(
+        player,
+        "§c结构预计算失败：" + failureReason
+    )
+
+    if(
+        preparation != null &&
+        preparation.reason ===
+            "SHIFTED_STRUCTURE_OUT_OF_WORLD"
+    )
+    {
+        modfusionControllerTell(
+            player,
+            "§c结构真实Y范围：" +
+            preparation.boundsMinY +
+            ".." +
+            preparation.boundsMaxY
+        )
+
+        modfusionControllerTell(
+            player,
+            "§7维度允许范围：" +
+            preparation.minimumBuildY +
+            ".." +
+            (
+                preparation.maximumBuildYExclusive - 1
             )
-        }
+        )
+
+        modfusionControllerTell(
+            player,
+            "§7本次垂直移动量：" +
+            preparation.verticalOffset
+        )
+    }
+}
     }
     else if(plan != null)
     {
@@ -1827,6 +2037,7 @@ validateModfusionControllerConfig()
 
 
 global.ModfusionBuildingController = {
+    onChunkLoaded: enqueueModfusionControllerLoadedChunk,
     schemaVersion: MODFUSION_BUILDING_CONTROLLER_SCHEMA_VERSION,
 
     getConfig: getModfusionControllerConfig,
@@ -1837,6 +2048,7 @@ global.ModfusionBuildingController = {
     enqueueCell: enqueueModfusionControllerCell,
     enqueueAtBlock: enqueueModfusionControllerAtBlock,
     retryCell: retryModfusionControllerCell
+
 }
 
 

@@ -42,6 +42,30 @@ var MODFUSION_BUILDING_PLANNER_CONFIG = {
     radiusRange: 80.0,
 
     surfaceY: 72,
+    biomeRanges: [
+    {
+        minimum: -1.0,
+        maximum: -0.3,
+        biomeId: "mahou:vanilla/plains"
+    },
+    {
+        minimum: -0.3,
+        maximum: 0.3,
+        biomeId: "mahou:vanilla/forest"
+    },
+    {
+        minimum: 0.3,
+        maximum: 0.8,
+        biomeId:
+            "mahou:modded/twilightforest/forest"
+    },
+    {
+        minimum: 0.8,
+        maximum: 1.0,
+        biomeId:
+            "mahou:modded/twilightforest/mushroom_forest"
+    }
+],
 
     buildingSalt: 7321441,
     buildingChance: 1.0,
@@ -819,6 +843,50 @@ function modfusionPlannerGetCellAtBlock(blockX, blockZ)
     )
 }
 
+function modfusionPlannerResolveBiomeId(
+    biomeSelector
+)
+{
+    var selector =
+        Number(biomeSelector)
+
+    if(!isFinite(selector))
+    {
+        return null
+    }
+
+    var ranges =
+        MODFUSION_BUILDING_PLANNER_CONFIG
+            .biomeRanges
+
+    var index
+
+    for(index = 0; index < ranges.length; index++)
+    {
+        var range = ranges[index]
+
+        var isLastRange =
+            index === ranges.length - 1
+
+        if(
+            selector >= range.minimum &&
+            (
+                selector < range.maximum ||
+                (
+                    isLastRange &&
+                    selector <= range.maximum
+                )
+            )
+        )
+        {
+            return String(
+                range.biomeId
+            )
+        }
+    }
+
+    return null
+}
 
 function modfusionPlannerGetIsland(worldSeed, cellX, cellZ)
 {
@@ -866,6 +934,14 @@ function modfusionPlannerGetIsland(worldSeed, cellX, cellZ)
         1.0
     )
 
+    var biomeSelector =
+    -1.0 + biomeRandom * 2.0
+
+    var biomeId =
+    modfusionPlannerResolveBiomeId(
+        biomeSelector
+    )
+
     return {
         layerId: config.layerId,
         cell: cell,
@@ -883,7 +959,8 @@ function modfusionPlannerGetIsland(worldSeed, cellX, cellZ)
         surfaceY: config.surfaceY,
 
         islandRandom: islandRandom,
-        biomeSelector: -1.0 + biomeRandom * 2.0
+        biomeSelector: biomeSelector,
+        biomeId: biomeId
     }
 }
 
@@ -991,7 +1068,7 @@ function modfusionPlannerGetRotation(building, roll)
 }
 
 
-function planModfusionBuilding(worldSeed, cellX, cellZ)
+function planModfusionBuilding(worldSeed, cellX, cellZ, actualBiomeId)
 {
     var cell = modfusionPlannerGetCell(cellX, cellZ)
 
@@ -1023,6 +1100,32 @@ function planModfusionBuilding(worldSeed, cellX, cellZ)
     var island = modfusionPlannerGetIsland(seed, cellX, cellZ)
     cell = island.cell
 
+    /*
+    * 保存原本由随机算法推算的群系，方便排错。
+    */
+    island.predictedBiomeId = island.biomeId
+
+    var normalizedActualBiomeId = actualBiomeId == null
+        ? ""
+        : String(actualBiomeId)
+
+    /*
+    * Controller提供了实际群系时，使用实际群系筛选建筑。
+    */
+    if(normalizedActualBiomeId.length > 0)
+    {
+        island.biomeId = normalizedActualBiomeId
+        island.biomeSource = "WORLD"
+    }
+    else
+    {
+        /*
+        * 保留兼容性：其他代码直接调用Planner时，
+        * 仍然可以使用原来的推算结果。
+        */
+        island.biomeSource = "PREDICTED"
+    }
+
     var base = {
         schemaVersion: MODFUSION_BUILDING_PLANNER_SCHEMA_VERSION,
         worldSeed: seedText,
@@ -1037,10 +1140,13 @@ function planModfusionBuilding(worldSeed, cellX, cellZ)
         return base
     }
 
-    var buildings = global.ModfusionBuildingRegistry.getEnabledForIsland(
-        island.layerId,
-        island.radius
-    )
+    var buildings =
+        global.ModfusionBuildingRegistry
+            .getEnabledForIsland(
+                island.layerId,
+                island.radius,
+                island.biomeId
+            )
 
     if(!Array.isArray(buildings) || buildings.length <= 0)
     {
@@ -1118,11 +1224,21 @@ function planModfusionBuilding(worldSeed, cellX, cellZ)
 }
 
 
-function planModfusionBuildingAtBlock(worldSeed, blockX, blockZ)
+function planModfusionBuildingAtBlock(
+    worldSeed,
+    blockX,
+    blockZ,
+    actualBiomeId
+)
 {
     var cell = modfusionPlannerGetCellAtBlock(blockX, blockZ)
 
-    return planModfusionBuilding(worldSeed, cell.x, cell.z)
+    return planModfusionBuilding(
+        worldSeed,
+        cell.x,
+        cell.z,
+        actualBiomeId
+    )
 }
 
 

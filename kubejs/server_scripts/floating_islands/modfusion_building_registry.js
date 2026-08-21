@@ -110,6 +110,7 @@ function normalizeModfusionBuilding(definition)
     var placement = definition.placement || {}
     var selection = definition.selection || {}
     var island = definition.island || {}
+    var terrainPolicy = placement.terrainPolicy || {}
 
     if(!modfusionRegistryIsResourceLocation(id))
     {
@@ -144,6 +145,59 @@ function normalizeModfusionBuilding(definition)
         )
     )
 
+    var terrainMode = String(
+    terrainPolicy.mode ||
+    "STRUCTURE_BLOCKS_ONLY"
+    )
+
+    var terrainBottomOffset = Math.floor(
+        modfusionRegistryReadFinite(
+            terrainPolicy.bottomOffset,
+            1
+        )
+    )
+
+    var terrainTopPadding = Math.floor(
+        modfusionRegistryReadFinite(
+            terrainPolicy.topPadding,
+            0
+        )
+    )
+
+    if(
+        terrainMode !== "STRUCTURE_BLOCKS_ONLY" &&
+        terrainMode !== "CLEAR_FOOTPRINT_ABOVE_SURFACE"
+    )
+    {
+        modfusionRegistryFail(
+            id +
+            " has an invalid terrainPolicy.mode: " +
+            terrainMode
+        )
+    }
+
+    if(
+        terrainBottomOffset < -64 ||
+        terrainBottomOffset > 64
+    )
+    {
+        modfusionRegistryFail(
+            id +
+            " terrainPolicy.bottomOffset must be between -64 and 64"
+        )
+    }
+
+    if(
+        terrainTopPadding < 0 ||
+        terrainTopPadding > 64
+    )
+    {
+        modfusionRegistryFail(
+            id +
+            " terrainPolicy.topPadding must be between 0 and 64"
+        )
+    }
+
     if(weight <= 0.0)
     {
         modfusionRegistryFail(id + " must have selection.weight > 0")
@@ -167,6 +221,33 @@ function normalizeModfusionBuilding(definition)
     var allowedLayers = modfusionRegistryUniqueStrings(
         island.allowedLayers
     )
+
+    var allowedBiomes =
+    modfusionRegistryUniqueStrings(
+        island.allowedBiomes
+    )
+
+    var biomeIndex
+
+    for(
+        biomeIndex = 0;
+        biomeIndex < allowedBiomes.length;
+        biomeIndex++
+    )
+    {
+        if(
+            !modfusionRegistryIsResourceLocation(
+                allowedBiomes[biomeIndex]
+            )
+        )
+        {
+            modfusionRegistryFail(
+                id +
+                " has an invalid allowed biome: " +
+                allowedBiomes[biomeIndex]
+            )
+        }
+    }
 
     if(allowedLayers.length <= 0)
     {
@@ -196,6 +277,7 @@ function normalizeModfusionBuilding(definition)
 
         island: {
             allowedLayers: allowedLayers,
+            allowedBiomes: allowedBiomes,
             minimumRadius: minimumRadius
         },
 
@@ -220,7 +302,13 @@ function normalizeModfusionBuilding(definition)
                 "STRUCTURE_DEFAULT"
             ),
 
-            exactY: placement.exactY === true
+            exactY: placement.exactY === true,
+
+            terrainPolicy: {
+            mode: terrainMode,
+            bottomOffset: terrainBottomOffset,
+            topPadding: terrainTopPadding
+            }
         },
 
         tags:
@@ -346,9 +434,13 @@ function getEnabledModfusionBuildings()
 
 function getEnabledModfusionBuildingsForIsland(
     layerId,
-    islandRadius
+    islandRadius,
+    biomeId
 )
 {
+    var biome =
+        String(biomeId || "")
+
     var layer =
         String(layerId || "")
 
@@ -370,20 +462,22 @@ function getEnabledModfusionBuildingsForIsland(
         i++
     )
     {
-        var building =
-            enabled[i]
+        var building = enabled[i]
+        var allowedBiomes = building.island.allowedBiomes
+        var biomeAllowed = allowedBiomes.length === 0 ||
+        (
+            biome.length > 0 &&
+            allowedBiomes.indexOf(biome) >= 0
+        )
 
         if(
-            building
-                .island
-                .allowedLayers
-                .indexOf(layer)
-                >= 0
+            building.island.allowedLayers.indexOf(layer)
+            >= 0
             &&
-            radius >=
-                building
-                    .island
-                    .minimumRadius
+            radius 
+            >= building.island.minimumRadius
+            &&
+            biomeAllowed
         )
         {
             result.push(
@@ -483,7 +577,7 @@ function getModfusionBuildingTotalWeight(
  * Initial large-structure test set
  * =========================================================
  *
- * Equal weights give each structure an expected 25% share.
+ * Equal weights give each structure an expected one-third share.
  *
  * footprintRadiusChunks is only a passive readiness boundary.
  * The future controller may check it with hasChunk(), but must
@@ -494,11 +588,18 @@ function getModfusionBuildingTotalWeight(
 function registerModfusionTwilightLargeStructure(
     path,
     displayName,
-    footprintRadiusChunks
+    footprintRadiusChunks,
+    yOffset,
+    allowedBiome
 )
 {
     var targetId =
         "twilightforest:" + path
+
+    var actualYOffset =
+        yOffset == null
+            ? 1
+            : Math.floor(Number(yOffset))
 
     registerModfusionBuilding({
         id: targetId,
@@ -518,6 +619,9 @@ function registerModfusionTwilightLargeStructure(
             allowedLayers: [
                 "MIDDLE"
             ],
+            allowedBiomes: [
+                allowedBiome
+            ],
 
             minimumRadius:
                 150.0
@@ -534,7 +638,7 @@ function registerModfusionTwilightLargeStructure(
                 "ISLAND_CENTER",
 
             yOffset:
-                1,
+                actualYOffset,
 
             footprintRadiusChunks:
                 footprintRadiusChunks,
@@ -546,7 +650,18 @@ function registerModfusionTwilightLargeStructure(
                 "STRUCTURE_DEFAULT",
 
             exactY:
-                false
+                false,
+
+            terrainPolicy: {
+                mode:
+                    "CLEAR_FOOTPRINT_ABOVE_SURFACE",
+
+                bottomOffset:
+                    1,
+
+                topPadding:
+                    8
+            }
         },
 
         tags: [
@@ -561,29 +676,29 @@ function registerModfusionTwilightLargeStructure(
 registerModfusionTwilightLargeStructure(
     "naga_courtyard",
     "娜迦庭院",
-    4
+    4,
+    0,
+    "mahou:modded/twilightforest/forest"
 )
 
 
 registerModfusionTwilightLargeStructure(
     "dark_tower",
     "暮初恶魂塔",
-    4
+    4,
+    1,
+    "mahou:vanilla/plains"
 )
 
 
 registerModfusionTwilightLargeStructure(
     "aurora_palace",
     "极光宫殿",
-    6
+    6,
+    1,
+    "mahou:modded/twilightforest/mushroom_forest"
 )
 
-
-registerModfusionTwilightLargeStructure(
-    "final_castle",
-    "终焉堡垒",
-    8
-)
 
 
 /*

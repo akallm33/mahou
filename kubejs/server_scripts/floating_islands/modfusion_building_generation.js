@@ -17,7 +17,12 @@ console.log("[ModFusion Building Generation] Adapter layer v2 loading")
  * the same StructureStart API used by the vanilla command.
  */
 
-
+var MODFUSION_GENERATION_LEGACY_TEMPLATE_CLASS = null
+var MODFUSION_GENERATION_LEGACY_TEMPLATE_POSITION_FIELD = null
+var MODFUSION_GENERATION_LEGACY_ROTATED_POSITION_FIELD = null
+var MODFUSION_GENERATION_TWILIGHT_TEMPLATE_CLASS = null
+var MODFUSION_GENERATION_TWILIGHT_ORIGINAL_POSITION_FIELD = null
+var MODFUSION_GENERATION_TWILIGHT_ORIGINAL_BOX_FIELD = null
 var MODFUSION_BUILDING_GENERATION_SCHEMA_VERSION = 2
 var MODFUSION_BUILDING_GENERATION_DIMENSION_ID =
     "mahou:modfusion_dimension"
@@ -28,6 +33,15 @@ var MODFUSION_BUILDING_GENERATION_ADAPTERS =
 var MODFUSION_GENERATION_BlockPos = Java.loadClass(
     "net.minecraft.core.BlockPos"
 )
+
+var MODFUSION_GENERATION_MutableBlockPos = Java.loadClass(
+    "net.minecraft.core.BlockPos$MutableBlockPos"
+)
+
+var MODFUSION_GENERATION_Blocks = Java.loadClass(
+    "net.minecraft.world.level.block.Blocks"
+)
+
 var MODFUSION_GENERATION_BoundingBox = Java.loadClass(
     "net.minecraft.world.level.levelgen.structure.BoundingBox"
 )
@@ -349,6 +363,183 @@ function modfusionGenerationGetExactSeedBox(level)
     }
 }
 
+function modfusionGenerationInitializeLegacyTemplateReflection(level)
+{
+    if(
+        MODFUSION_GENERATION_LEGACY_TEMPLATE_CLASS != null
+    )
+    {
+        return
+    }
+
+    var classLoader =
+        level
+            .getClass()
+            .getClassLoader()
+
+    MODFUSION_GENERATION_LEGACY_TEMPLATE_CLASS =
+        classLoader.loadClass(
+            "twilightforest.world.components.structures." +
+            "TFStructureComponentTemplate"
+        )
+
+    MODFUSION_GENERATION_LEGACY_TEMPLATE_POSITION_FIELD =
+        MODFUSION_GENERATION_LEGACY_TEMPLATE_CLASS
+            .getDeclaredField("templatePosition")
+
+    MODFUSION_GENERATION_LEGACY_TEMPLATE_POSITION_FIELD
+        .setAccessible(true)
+
+    MODFUSION_GENERATION_LEGACY_ROTATED_POSITION_FIELD =
+        MODFUSION_GENERATION_LEGACY_TEMPLATE_CLASS
+            .getDeclaredField("rotatedPosition")
+
+    MODFUSION_GENERATION_LEGACY_ROTATED_POSITION_FIELD
+        .setAccessible(true)
+}
+
+
+function modfusionGenerationMovePositionField(
+    field,
+    piece,
+    offsetX,
+    offsetY,
+    offsetZ
+)
+{
+    var oldPosition = field.get(piece)
+
+    if(oldPosition == null)
+    {
+        return
+    }
+
+    field.set(
+        piece,
+        new MODFUSION_GENERATION_BlockPos(
+            Number(oldPosition.getX()) + offsetX,
+            Number(oldPosition.getY()) + offsetY,
+            Number(oldPosition.getZ()) + offsetZ
+        )
+    )
+}
+
+
+function modfusionGenerationMoveLegacyTemplateCoordinates(
+    level,
+    piece,
+    offsetX,
+    offsetY,
+    offsetZ
+)
+{
+    modfusionGenerationInitializeLegacyTemplateReflection(
+        level
+    )
+
+    if(
+        !MODFUSION_GENERATION_LEGACY_TEMPLATE_CLASS
+            .isInstance(piece)
+    )
+    {
+        return
+    }
+
+    modfusionGenerationMovePositionField(
+        MODFUSION_GENERATION_LEGACY_TEMPLATE_POSITION_FIELD,
+        piece,
+        offsetX,
+        offsetY,
+        offsetZ
+    )
+
+    modfusionGenerationMovePositionField(
+        MODFUSION_GENERATION_LEGACY_ROTATED_POSITION_FIELD,
+        piece,
+        offsetX,
+        offsetY,
+        offsetZ
+    )
+}
+
+function modfusionGenerationInitializeTwilightTemplateReflection(level)
+{
+    if(MODFUSION_GENERATION_TWILIGHT_TEMPLATE_CLASS != null)
+    {
+        return
+    }
+
+    var classLoader = level.getClass().getClassLoader()
+
+    MODFUSION_GENERATION_TWILIGHT_TEMPLATE_CLASS =
+        classLoader.loadClass(
+            "twilightforest.world.components.structures." +
+            "TwilightTemplateStructurePiece"
+        )
+
+    MODFUSION_GENERATION_TWILIGHT_ORIGINAL_POSITION_FIELD =
+        MODFUSION_GENERATION_TWILIGHT_TEMPLATE_CLASS
+            .getDeclaredField("originalPlacement")
+
+    MODFUSION_GENERATION_TWILIGHT_ORIGINAL_POSITION_FIELD
+        .setAccessible(true)
+
+    MODFUSION_GENERATION_TWILIGHT_ORIGINAL_BOX_FIELD =
+        MODFUSION_GENERATION_TWILIGHT_TEMPLATE_CLASS
+            .getDeclaredField("originalBox")
+
+    MODFUSION_GENERATION_TWILIGHT_ORIGINAL_BOX_FIELD
+        .setAccessible(true)
+}
+
+
+function modfusionGenerationMoveTwilightTemplateOriginalCoordinates(
+    level,
+    piece,
+    offsetX,
+    offsetY,
+    offsetZ
+)
+{
+    modfusionGenerationInitializeTwilightTemplateReflection(level)
+
+    if(
+        !MODFUSION_GENERATION_TWILIGHT_TEMPLATE_CLASS
+            .isInstance(piece)
+    )
+    {
+        return
+    }
+
+    var originalPosition =
+        MODFUSION_GENERATION_TWILIGHT_ORIGINAL_POSITION_FIELD
+            .get(piece)
+
+    if(originalPosition != null)
+    {
+        MODFUSION_GENERATION_TWILIGHT_ORIGINAL_POSITION_FIELD.set(
+            piece,
+            new MODFUSION_GENERATION_BlockPos(
+                Number(originalPosition.getX()) + offsetX,
+                Number(originalPosition.getY()) + offsetY,
+                Number(originalPosition.getZ()) + offsetZ
+            )
+        )
+    }
+
+    var originalBox =
+        MODFUSION_GENERATION_TWILIGHT_ORIGINAL_BOX_FIELD
+            .get(piece)
+
+    if(originalBox != null)
+    {
+        originalBox.move(
+            offsetX,
+            offsetY,
+            offsetZ
+        )
+    }
+}
 
 function prepareModfusionRegisteredStructure(level, plan)
 {
@@ -437,9 +628,31 @@ function prepareModfusionRegisteredStructure(level, plan)
         var pieceIndex
 
         for(pieceIndex = 0; pieceIndex < pieces.size(); pieceIndex++)
-        {
-            pieces.get(pieceIndex).move(0, verticalOffset, 0)
-        }
+{
+    var piece = pieces.get(pieceIndex)
+
+    piece.move(
+    0,
+    verticalOffset,
+    0
+    )
+
+    modfusionGenerationMoveTwilightTemplateOriginalCoordinates(
+        level,
+        piece,
+        0,
+        verticalOffset,
+        0
+    )
+
+    modfusionGenerationMoveLegacyTemplateCoordinates(
+        level,
+        piece,
+        0,
+        verticalOffset,
+        0
+    )
+}   
 
         var bounds = start.getBoundingBox()
         var minimumBuildY = Number(level.getMinBuildHeight())
@@ -517,6 +730,181 @@ function prepareModfusionRegisteredStructure(level, plan)
     }
 }
 
+function modfusionGenerationGetTerrainPolicy(plan)
+{
+    if(
+        plan == null ||
+        plan.building == null ||
+        plan.building.placement == null ||
+        plan.building.placement.terrainPolicy == null
+    )
+    {
+        return {
+            mode: "STRUCTURE_BLOCKS_ONLY",
+            bottomOffset: 1,
+            topPadding: 0
+        }
+    }
+
+    var source =
+        plan.building
+            .placement
+            .terrainPolicy
+
+    return {
+        mode: String(
+            source.mode ||
+            "STRUCTURE_BLOCKS_ONLY"
+        ),
+
+        bottomOffset: Math.floor(
+            Number(source.bottomOffset || 0)
+        ),
+
+        topPadding: Math.floor(
+            Number(source.topPadding || 0)
+        )
+    }
+}
+
+
+function modfusionGenerationClearBuildingFootprint(
+    level,
+    plan,
+    preparation
+)
+{
+    var terrainPolicy =
+        modfusionGenerationGetTerrainPolicy(plan)
+
+    if(
+        terrainPolicy.mode !==
+        "CLEAR_FOOTPRINT_ABOVE_SURFACE"
+    )
+    {
+        return {
+            cleared: false,
+            blockCount: 0
+        }
+    }
+
+    if(
+        plan == null ||
+        plan.island == null ||
+        preparation == null ||
+        preparation.bounds == null
+    )
+    {
+        throw new Error(
+            "Building footprint clearing data is incomplete"
+        )
+    }
+
+    var surfaceY =
+        Number(plan.island.surfaceY)
+
+    if(!isFinite(surfaceY))
+    {
+        throw new Error(
+            "Building footprint surface Y is invalid"
+        )
+    }
+
+    var minimumX =
+        Math.floor(preparation.bounds.minX)
+
+    var maximumX =
+        Math.floor(preparation.bounds.maxX)
+
+    var minimumZ =
+        Math.floor(preparation.bounds.minZ)
+
+    var maximumZ =
+        Math.floor(preparation.bounds.maxZ)
+
+    var minimumY =
+        Math.floor(surfaceY) +
+        terrainPolicy.bottomOffset
+
+    var maximumY = Math.min(
+        Number(level.getMaxBuildHeight()) - 1,
+
+        Math.floor(
+            preparation.bounds.maxY
+        ) +
+        terrainPolicy.topPadding
+    )
+
+    if(minimumY > maximumY)
+    {
+        return {
+            cleared: true,
+            blockCount: 0
+        }
+    }
+
+    var airState =
+        MODFUSION_GENERATION_Blocks
+            .AIR
+            .defaultBlockState()
+
+    var position =
+        new MODFUSION_GENERATION_MutableBlockPos()
+
+    var clearedBlocks = 0
+    var x
+    var y
+    var z
+
+    for(x = minimumX; x <= maximumX; x++)
+    {
+        position.setX(x)
+
+        for(z = minimumZ; z <= maximumZ; z++)
+        {
+            position.setZ(z)
+
+            for(y = minimumY; y <= maximumY; y++)
+            {
+                position.setY(y)
+
+                var state =
+                    level.getBlockState(position)
+
+                if(
+                    state != null &&
+                    !state.isAir()
+                )
+                {
+                    if(
+                        level.setBlock(
+                            position,
+                            airState,
+                            2
+                        )
+                    )
+                    {
+                        clearedBlocks++
+                    }
+                }
+            }
+        }
+    }
+
+    console.log(
+        "[ModFusion Building Generation] Cleared " +
+        clearedBlocks +
+        " obstructing blocks for " +
+        plan.buildingId +
+        " in cell " +
+        plan.cell.key
+    )
+
+    return {
+        cleared: true,
+        blockCount: clearedBlocks
+    }
+}
 
 function placeModfusionRegisteredStructure(level, plan, preparation)
 {
@@ -578,8 +966,14 @@ function placeModfusionRegisteredStructure(level, plan, preparation)
 
     try
     {
+        modfusionGenerationClearBuildingFootprint(
+            level,
+            plan,
+            preparation
+        )
+
         for(cx = footprint.minChunkX; cx <= footprint.maxChunkX; cx++)
-        {
+            {
             for(cz = footprint.minChunkZ; cz <= footprint.maxChunkZ; cz++)
             {
                 var chunkPos = new MODFUSION_GENERATION_ChunkPos(cx, cz)
